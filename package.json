@@ -1,0 +1,9 @@
+{
+  "name": "silkroad-damage-simulator",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/engine.test.cjs tests/live-game.cjs",
+    "test:live": "node --test tests/live-game.cjs"
+  }
+}
+

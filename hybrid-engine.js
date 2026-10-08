@@ -51,7 +51,7 @@
     masteries: { physical: 0, imbue: 0, nuke: 0 },
     physicalSkill: { enabled: false, min: null, max: null, rate: null, secondaryPercent: null },
     imbue: { enabled: false, min: null, max: null, rate: 100, mode: 'attack' },
-    nuke: { enabled: false, min: null, max: null, rate: null },
+    nuke: { enabled: false, min: null, max: null, rate: null, secondaryPercent: null },
     target: {
       level: 1, parry: 100, physicalDefense: 7, magicalDefense: 10,
       physicalAbsorption: 1, magicalAbsorption: 1
@@ -189,7 +189,7 @@
     verify(s);
     const stat = stats(s);
     const ap = attackPower(s, stat);
-    if (!ap) return {stats:stat, ap:null, normal:null, physicalSkill:null, normalImbue:null, physicalSkillImbue:null, nuke:null};
+    if (!ap) return {stats:stat, ap:null, normal:null, physicalSkill:null, normalImbue:null, physicalSkillImbue:null, nuke:null, nukeImbue:null};
     const d = inputForDamage(s, stat, ap);
     const normal = Damage.ranges(d);
     let physicalSkill = null, physicalSkillImbue = null;
@@ -201,8 +201,9 @@
       if (s.imbue.enabled) physicalSkillImbue = withImbue(s, d, s.physicalSkill.rate, s.physicalSkill.secondaryPercent);
     }
 
-    // Nuke is a standalone magical ACTIVE skill with user-entered tooltip stats.
-    let nuke = null;
+    // Nuke primary and its secondary Imbue run on separate magical cores.
+    // The primary descriptor's +0x10 is not its main SkillRate.
+    let nuke = null, nukeImbue = null;
     if (s.nuke.enabled) {
       const n = inputForDamage(s, stat, ap);
       n.attackMode = 'active';
@@ -210,9 +211,26 @@
       addSkill(n.magical, s.nuke, s.masteries.nuke);
       n.magical.apMode = 'raw';
       nuke = Damage.ranges(n);
+      if (s.imbue.enabled && s.nuke.secondaryPercent != null) {
+        const secondary = inputForDamage(s, stat, ap);
+        secondary.attackMode = 'active';
+        secondary.physical.enabled = false;
+        addSkill(secondary.magical, s.imbue, secondaryMastery(s.masteries.nuke, s.masteries.imbue));
+        secondary.magical.apMode = 'raw';
+        const p=Number(s.nuke.secondaryPercent);
+        if (!Number.isInteger(p)||p<0||p>4294967295)throw new Error('Nuke secondary percentage must be an unsigned integer.');
+        const endpoint=t=>{
+          const primaryCore=Damage.channel(n,'magical',t);
+          const secondaryCore=Damage.channel(secondary,'magical',t);
+          if(secondaryCore*p>0xFFFFFFFF)throw new Error('Nuke secondary DWORD overflow is not supported.');
+          return Damage.total(n,0,primaryCore+Math.trunc((secondaryCore*p>>>0)/100));
+        };
+        nukeImbue={normal:{min:endpoint(0),max:endpoint(100)}};
+        nukeImbue.critical={...nukeImbue.normal};
+      }
     }
 
-    return {stats: stat, ap, normal, physicalSkill, normalImbue, physicalSkillImbue, nuke};
+    return {stats: stat, ap, normal, physicalSkill, normalImbue, physicalSkillImbue, nuke, nukeImbue};
   }
 
   // User's historical mapping: elemental mastery covers magical AP + skill AP.

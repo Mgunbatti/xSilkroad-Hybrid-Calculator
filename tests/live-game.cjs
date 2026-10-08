@@ -24,7 +24,7 @@ test('weapon-specific normal descriptors and no invented rates for other weapons
     s.weapon=weapon;assert.equal(E.descriptorPercent(s,'physical'),percent);
   }
   s.weapon='custom';s.basicPercent=73;assert.equal(E.descriptorPercent(s,'physical'),73);
-  assert.equal(E.basicSkills.blade,undefined);
+  assert.equal(E.basicSkills.blade,60);
   const withoutSkill=structuredClone(s);withoutSkill.physical.skillMin=withoutSkill.physical.skillMax=0;
   assert.deepEqual(E.ranges(s),E.ranges(withoutSkill));
   s.attackMode='active';s.physical.skillPercent=250;

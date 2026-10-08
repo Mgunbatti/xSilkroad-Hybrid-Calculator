@@ -13,11 +13,42 @@ const knownSkillNames={
  SKILL_CH_LIGHTNING_CHUNDUNG_A:'Shock Lion Shout',
  SKILL_CH_FIRE_GIGONGTA_C:'Poison Fire Force',
  SKILL_CH_COLD_GIGONGTA_C:'Ice Ocean Force',
- SKILL_CH_LIGHTNING_GIGONGTA_C:'Thunder King Force'
+ SKILL_CH_LIGHTNING_GIGONGTA_C:'Thunder King Force',
+ SKILL_CH_BOW_POWER_D:'Strong Bow – Will',
+ SKILL_CH_FIRE_GIGONGTA_E:'Fire Imbue (Lv100)',
+ SKILL_CH_FIRE_GIGONGSUL_F:'Flame Wave – Disintegrate'
 };
 function skillLabel(g){
  return knownSkillNames[g] || g.replace(/^SKILL_CH_/,'').replaceAll('_',' ').replace(/\b([A-Z])\b/g,'$1');
 }
+// Starting loadout uses actual skill records, never fabricated skill damage.
+// If a series is unavailable after lowering level, use an eligible earlier
+// book in the same skill family. All these choices remain user-editable.
+const starterSeries={
+ physicalSkill:'SKILL_CH_BOW_POWER_D',
+ imbue:'SKILL_CH_FIRE_GIGONGTA_E',
+ nuke:'SKILL_CH_FIRE_GIGONGSUL_F'
+};
+let applyStarterSkills=true;
+function pickEligibleFamilyGroup(k,preferred){
+ const all=listFor(k);
+ if(all.some(x=>x.group===preferred))return preferred;
+ const parent=preferred.slice(0,preferred.lastIndexOf('_')+1);
+ const books=all.filter(x=>x.group.startsWith(parent));
+ if(!books.length)return '';
+ return books.sort((a,b)=>
+   b.max.requiredMasteryLevel-a.max.requiredMasteryLevel ||
+   b.max.skillLevel-a.max.skillLevel)[0].group;
+}
+function selectStarterSkills(){
+ if(!skillDatabase)return;
+ for(const [k,preferred] of Object.entries(starterSeries)){
+  const selection=pickEligibleFamilyGroup(k,preferred);
+  if(selection)$(k+'-group').value=selection;
+ }
+ refreshSkillSelectors();
+}
+
 
 function masterFor(k){return Number($('mastery-'+({physicalSkill:'physical',imbue:'imbue',nuke:'nuke'}[k])).value);}
 function listFor(k){
@@ -39,10 +70,12 @@ function refreshSkillSelectors(){
   select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,skillLabel(x.group))));
   const stillAvailable=choices.some(c=>c.group===previous);
   if(stillAvailable)select.value=previous;
-  // A group unlocked at a higher mastery must not remain active through
-  // its old, hidden AP when the character level or mastery is lowered.
-  if(previous && !stillAvailable)
-   for(const field of ['min','max','rate'])$(k+'-'+field).value='';
+  else if(previous) {
+   // Move down the same skill-tree series when mastery decreases.
+   const fallback=pickEligibleFamilyGroup(k,previous);
+   if(fallback)select.value=fallback;
+   else for(const field of ['min','max','rate'])$(k+'-'+field).value='';
+  }
   const lvl=$(k+'-skillLevel'),old=lvl.value;
   lvl.replaceChildren(option('','Auto: highest available'));
   const group=select.value;
@@ -85,6 +118,10 @@ async function loadSkillProfile(which){
  }
  skillDatabase=skillProfiles[which];
  refreshSkillSelectors();
+ if(applyStarterSkills){
+  selectStarterSkills();
+  applyStarterSkills=false;
+ }
  update();
 }
 let profileLoadSequence=0;
@@ -197,7 +234,11 @@ function quickCard(label, value, note='',icon='activity',kind='stat'){
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
-const damageOutputs=[['normal','Normal Attack'],['physicalSkill','Physical Skill'],['nuke','Nuke'],['nukeImbue','Nuke + Imbue'],['normalImbue','Normal + Imbue'],['physicalSkillImbue','Physical Skill + Imbue']];
+const damageOutputs=[
+ ['normal','Normal Attack'],['normalImbue','Normal + Imbue'],
+ ['physicalSkill','Physical Skill'],['physicalSkillImbue','Physical Skill + Imbue'],
+ ['nuke','Nuke'],['nukeImbue','Nuke + Imbue']
+];
 const hasPhysicalCritical=key=>!['nuke','nukeImbue'].includes(key);
 function renderQuick(result){
  const st=result.stats;
@@ -312,6 +353,7 @@ $('reset').addEventListener('click',()=>{
  }
  previousWeapon='sword';
  previousUsable=usable();previousLevel=Number($('level').value);
+ applyStarterSkills=true;
  syncPoints();switchSkillProfile();
 });
 syncPoints();update();

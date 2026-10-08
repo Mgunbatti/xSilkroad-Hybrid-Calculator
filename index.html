@@ -11,7 +11,7 @@
   <script defer src="engine.js?v=20261008-7"></script>
   <script defer src="hybrid-engine.js?v=20261008-7"></script>
   <script defer src="skill-catalog.js?v=20261008-8"></script>
-  <script defer src="hybrid-app.js?v=20261008-8"></script>
+  <script defer src="hybrid-app.js?v=20261008-9"></script>
 </head>
 <body>
 <header>
@@ -71,6 +71,15 @@
       <div class="custom-grid">
         <div class="config-stack">
           <section class="config-section">
+            <h3>Skill Database</h3>
+            <label for="skillProfile">Server skill data</label>
+            <select id="skillProfile">
+              <option value="original">SILKROAD_R_SHARD (Original data)</option>
+              <option value="vsro">SRO_VT_SHARD (vSRO)</option>
+            </select>
+            <p class="config-note">Select your server version. The same Damage Engine is used for both. Manual skill values remain available.</p>
+          </section>
+          <section class="config-section">
             <h3>Normal Attack</h3>
             <label for="weapon">Chinese mastery — normal attack only</label>
             <select id="weapon">
@@ -114,7 +123,7 @@
             <div class="fields" id="physicalSkill-fields"></div>
           </section>
           <section class="config-section">
-            <h3>Nuke</h3>
+            <h3>Nuke / Magical Skill</h3>
             <div class="field"><label for="nuke-group">Skill series (database)</label><select id="nuke-group"><option value="">Manual values</option></select></div>
             <div class="field"><label for="nuke-skillLevel">Learned skill level</label><select id="nuke-skillLevel"><option value="">Auto: highest available</option></select></div>
             <label class="toggle"><input id="nuke-enabled" type="checkbox"> Include Nuke</label>

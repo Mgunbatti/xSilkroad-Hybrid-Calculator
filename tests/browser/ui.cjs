@@ -24,7 +24,8 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   await page.locator('#apMode').selectOption('displayed');
   await page.locator('#weapon').selectOption('spear');
   for(const [id,value] of Object.entries({bonusSTR:77,bonusINT:77,physicalMin:1315,physicalMax:1568,magicalMin:1041,magicalMax:1207,'mastery-physical':52,'mastery-imbue':52,'mastery-nuke':40,'imbue-min':187,'imbue-max':312,'physicalSkill-min':574,'physicalSkill-max':777,'physicalSkill-rate':350,'nuke-min':123,'nuke-max':205,'nuke-rate':250}))await page.locator('#'+id).fill(String(value));
-  for(const key of ['imbue','physicalSkill','nuke'])await page.locator('#'+key+'-enabled').check();
+  // Skills are included automatically when configured; no Include checkboxes.
+  for(const key of ['imbue','physicalSkill','nuke'])assert.equal(await page.locator('#'+key+'-enabled').count(),0);
   await page.waitForFunction(()=>document.querySelector('#quick-results').textContent.includes('4,952'));
   assert.equal(await page.locator('#error').isVisible(),false);
   const results=await page.locator('#quick-results').innerText();
@@ -47,7 +48,8 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   await page.screenshot({path:path.join(artifactDir,'hybrid-mobile.png'),fullPage:true});
   await page.locator('#reset').click();
   assert.equal(await page.locator('#physicalMin').inputValue(),'');
-  assert.equal(await page.locator('#imbue-enabled').isChecked(),false);
+  assert.equal(await page.locator('#imbue-group').inputValue(),'');
+  assert.equal(await page.locator('#imbue-min').inputValue(),'');
   assert.equal(await page.locator('#error').isVisible(),false);
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}

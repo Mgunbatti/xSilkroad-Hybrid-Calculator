@@ -25,7 +25,7 @@ test('default demo is Manyang + Copper Sword + starter Fire skills',()=>{
 });
 
 test('level 1 defaults, devil multiplies both HP and MP without changing balance',()=>{
- const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;
+ const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;s.bonusSTR=0;s.bonusINT=0;s.bonusSTR=0;s.bonusINT=0;
  const normal=H.calculate(s);assert.equal(normal.stats.HP,200);assert.equal(normal.stats.MP,200);
  s.devilRate=20;const devil=H.calculate(s);
  assert.equal(devil.stats.HP,240);assert.equal(devil.stats.MP,240);

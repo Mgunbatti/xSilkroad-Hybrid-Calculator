@@ -98,3 +98,11 @@ button:focus-visible,summary:focus-visible{outline:2px solid #58a6ff}
 @media (min-width:1150px){.results-panel{min-height:430px}}
 @media (max-width:960px){.quick-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:480px){.quick-card{padding:12px;column-gap:7px;grid-template-columns:24px minmax(0,1fr)}.quick-card .mini-icon{width:23px;height:23px;font-size:15px}.quick-card strong{font-size:17px}}
+
+/* Four core stats in two columns; the three requested damage cards in one row. */
+.quick-results{grid-template-columns:repeat(6,minmax(0,1fr))}
+.quick-card.stat{grid-column:span 3}
+.quick-card.damage{grid-column:span 2}
+.quick-card.optional{grid-column:span 3}
+@media(max-width:750px){.quick-results{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-card.stat,.quick-card.damage,.quick-card.optional{grid-column:span 1}}
+@media(max-width:440px){.quick-card.damage{grid-column:span 2}}

@@ -15,11 +15,39 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#physicalMin').inputValue(),'');
   assert.equal(await page.locator('#error').isVisible(),false);
   assert.equal(await page.locator('#quick-results .damage').count(),5);
+  // Visible character inputs appear in natural user order, not buried in Advanced.
+  assert.equal(await page.locator('#bonusSTR').count(),1);
+  assert.equal(await page.locator('#bonusINT').count(),1);
+  assert.equal(await page.locator('#character-ap-heading').innerText(),'Character Attack Power');
+  assert.equal(await page.locator('#apMode').inputValue(),'displayed');
+  assert.equal(await page.locator('#mastery-physical').inputValue(),'100');
+  assert.equal(await page.locator('#mastery-imbue').inputValue(),'100');
+  assert.equal(await page.locator('#mastery-nuke').inputValue(),'100');
+  assert.equal(await page.locator('#imbueMode').count(),0);
+  assert.equal(await page.locator('#normalSecondary').count(),0);
+  assert.equal(await page.locator('#skillSecondary').count(),0);
+  assert.equal(await page.locator('#secondary-fields').count(),0);
+  const inputsInOrder=await page.evaluate(()=>{
+   const ids=['strPoints','bonusSTR','bonusINT','physicalMin','physicalMax','magicalMin','magicalMax'];
+   return ids.map(id=>document.getElementById(id).compareDocumentPosition(document.getElementById('strPoints')));
+  });
+  assert.equal(inputsInOrder.length,7);
+
   // Magical-only nuke cards never have a physical critical component.
   assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke + Imbue'}).locator('small').count(),0);
   assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke'}).locator('small').count(),0);
   assert.equal(await page.locator('body').innerText().then(s=>/Mastery %|Attack rate \(distribution\)|Target parry|Copper Sword|Normal attack multiplier/.test(s)),false);
   await page.locator('#level').fill('52');
+  for(const k of ['physical','imbue','nuke'])assert.equal(await page.locator('#mastery-'+k).inputValue(),'52');
+  // A deliberately lower learned mastery is preserved on level changes;
+  // otherwise it tracks the character level automatically.
+  await page.locator('#mastery-imbue').fill('40');
+  await page.locator('#level').fill('53');
+  assert.equal(await page.locator('#mastery-physical').inputValue(),'53');
+  assert.equal(await page.locator('#mastery-nuke').inputValue(),'53');
+  assert.equal(await page.locator('#mastery-imbue').inputValue(),'40');
+  await page.locator('#level').fill('52');
+  await page.locator('#mastery-imbue').fill('52');
   await page.locator('[data-ratio="1"]').click();
   await page.locator('#apMode').selectOption('displayed');
   await page.locator('#weapon').selectOption('spear');
@@ -50,6 +78,7 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#physicalMin').inputValue(),'');
   assert.equal(await page.locator('#imbue-group').inputValue(),'');
   assert.equal(await page.locator('#imbue-min').inputValue(),'');
+  assert.equal(await page.locator('#mastery-nuke').inputValue(),'100');
   assert.equal(await page.locator('#error').isVisible(),false);
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}

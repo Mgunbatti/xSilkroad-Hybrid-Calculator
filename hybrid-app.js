@@ -7,7 +7,7 @@ function field(parent,id,label,value,min=0,step='any'){
   const wrap=document.createElement('div');wrap.className='field';
   const lab=document.createElement('label');lab.htmlFor=id;lab.textContent=label;
   const input=document.createElement('input');
-  Object.assign(input,{id,type:'number',value:String(value),min:String(min),step,required:true});
+  Object.assign(input,{id,type:'number',value:value===null?'':String(value),min:String(min),step,required:true});
   wrap.append(lab,input);parent.append(wrap);
 }
 for (const [key,label] of [
@@ -18,15 +18,18 @@ for (const [key,label] of [
 ]) field($('weapon-fields'),key,label,defaults.weapon[key]);
 for (const [key,label] of [['physicalSkill','Physical skill'],['imbue','Imbue'],['nuke','Nuke']]) {
  const x=defaults[key];
- for(const [fieldName,caption] of [['min','Skill AP min'],['max','Skill AP max'],['rate','Damage rate %'],['mastery','Mastery %']])
-   field($(key+'-fields'),key+'-'+fieldName,caption,x[fieldName],0,fieldName==='mastery'?'1':'any');
+ for(const [fieldName,caption] of [['min','Skill AP min'],['max','Skill AP max'],['rate','Damage rate %']])
+   field($(key+'-fields'),key+'-'+fieldName,caption,x[fieldName],0,'any');
 }
 for(const [key,label,value] of [
- ['targetLevel','Target level',1],['parry','Target parry (assumed)',100],
+ ['targetLevel','Target level',1],
  ['physicalDefense','Physical defense',7],['magicalDefense','Magical defense',10],
  ['physicalAbsorption','Physical absorption %',1],['magicalAbsorption','Magical absorption %',1],
  ['physicalBonus','Physical damage bonus %',0],['magicalBonus','Magical damage bonus %',0]
 ]) field($('target-fields'),key,label,value,key==='targetLevel'||key==='parry'?1:0,key==='targetLevel'?'1':'any');
+for(const [key,label] of [['physical','Weapon mastery level'],['imbue','Imbue element mastery level'],['nuke','Nuke element mastery level']]) field($('mastery-fields'),'mastery-'+key,label,0,0,'1');
+for(const [id,label,value] of [['normalSecondary','Normal descriptor secondary %',null],['skillSecondary','Physical skill descriptor secondary %',null],['imbueRate','Imbue descriptor rate %',100]]) field($('secondary-fields'),id,label,value,0,'1');
+$('imbue-rate').parentElement.hidden=true;
 const ids=[...document.querySelectorAll('#hybrid-form input, #hybrid-form select')].map(e=>e.id);
 const initialValues=Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]));
 function usable(){
@@ -48,18 +51,21 @@ function syncPoints(rescale=false){
 }
 function read(){
  const s=H.defaults();
- const val=id=>{const input=$(id);return input.value.trim()===''?NaN:input.valueAsNumber;};
- s.level=val('level');s.maxLevelReached=Math.max(s.level,val('maxLevelReached'));
+ const val=id=>{const input=$(id);return input.value.trim()===''?null:input.valueAsNumber;};
+ s.level=val('level');s.maxLevelReached=val('maxLevelReached');
  s.unspentPoints=val('unspentPoints');s.allocatedSTR=val('strPoints');
- for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate','attackRate'])s[k]=val(k);
- s.weapon.key=$('weapon').value;
+ for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate'])s[k]=val(k);
+ s.weapon.key=$('weapon').value;s.weapon.apMode=$('apMode').value;
+ for(const k of ['physical','imbue','nuke'])s.masteries[k]=val('mastery-'+k);
+ s.imbue.mode=$('imbueMode').value;s.weapon.secondaryPercent=val('normalSecondary');s.physicalSkill.secondaryPercent=val('skillSecondary');
  s.weapon.basicPercent=({sword:60,spear:117,bow:84})[s.weapon.key];
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
    s[k].enabled=$(k+'-enabled').checked;
-   for(const f of ['min','max','rate','mastery'])s[k][f]=val(k+'-'+f);
+   for(const f of ['min','max','rate'])s[k][f]=val(k+'-'+f);
  }
- s.target.level=val('targetLevel');s.target.parry=val('parry');
+ s.imbue.rate=val('imbueRate');
+ s.target.level=val('targetLevel');
  for(const f of ['physicalDefense','magicalDefense','physicalAbsorption','magicalAbsorption'])s.target[f]=val(f);
  s.damageBonuses.physical=val('physicalBonus');s.damageBonuses.magical=val('magicalBonus');
  return H.verify(s);
@@ -85,19 +91,13 @@ function quickCard(label, value, note='',icon='activity',kind='stat'){
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
+const damageOutputs=[['normal','Normal Attack'],['physicalSkill','Physical Skill'],['nuke','Nuke'],['normalImbue','Normal + Imbue'],['physicalSkillImbue','Physical Skill + Imbue']];
 function renderQuick(result){
  const st=result.stats;
- const cards=[
- quickCard('HP',fmt(st.HP),'Maximum HP','heart','stat'),
- quickCard('MP',fmt(st.MP),'Maximum MP','droplet','stat'),
- quickCard('Physical Balance',fmt(st.physicalBalance)+'%','','swords','stat'),
- quickCard('Magical Balance',fmt(st.magicalBalance)+'%','','flame','stat'),
- quickCard('Physical Damage',damageRange(result.physical),'Normal hit','sword','damage'),
- quickCard('Critical Physical',damageRange(result.physical,true),'Physical crit only','target','damage'),
- quickCard('Nuke Damage',damageRange(result.nuke),'Magical skill · no crit','spark','damage')
- ];
- if(result.physicalImbue) cards.push(quickCard('Physical + Imbue',damageRange(result.physicalImbue),'Secondary imbue estimate','flame','optional'));
- if(result.physicalImbue) cards.push(quickCard('Imbue + Physical Crit',damageRange(result.physicalImbue,true),'Physical component critical','swords','optional'));
+ const cards=[quickCard('HP',fmt(st.HP)),quickCard('MP',fmt(st.MP)),quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),quickCard('Magical Balance',fmt(st.magicalBalance)+'%')];
+ for(const [key,label] of damageOutputs){
+  cards.push(quickCard(label,damageRange(result[key]),key==='nuke'?'':('Critical: '+damageRange(result[key],true)),'activity','damage'));
+ }
  $('quick-results').replaceChildren(...cards);
 }
 function column(title,result,selected=false){
@@ -109,48 +109,37 @@ function column(title,result,selected=false){
  c.append(row('HP / MP',fmt(st.HP)+' / '+fmt(st.MP)));
  c.append(row('Physical Balance',fmt(st.physicalBalance)+'%'));
  c.append(row('Magical Balance',fmt(st.magicalBalance)+'%'));
- c.append(row('Physical AP (estimated)',ap.physical.map(fmt).join(' – ')));
- c.append(row('Magical AP (estimated)',ap.magical.map(fmt).join(' – ')));
- c.append(row('Physical hit',damageRange(result.physical)));
- c.append(row('Physical critical',damageRange(result.physical,true)));
- if(result.physicalImbue){
-  c.append(row('Physical + imbue',damageRange(result.physicalImbue),'Secondary imbue stage provisional'));
-  c.append(row('Physical + imbue critical',damageRange(result.physicalImbue,true)));
+ c.append(row('Physical AP'+($('apMode').value==='tooltip'?' (estimated)':''),ap?ap.physical.map(fmt).join(' – '):'—'));
+ c.append(row('Magical AP'+($('apMode').value==='tooltip'?' (estimated)':''),ap?ap.magical.map(fmt).join(' – '):'—'));
+ for(const [key,label] of damageOutputs){
+  c.append(row(label,damageRange(result[key])));
+  if(key!=='nuke')c.append(row(label+' critical',damageRange(result[key],true)));
  }
- if(result.nuke)c.append(row('Nuke',damageRange(result.nuke)));
  return c;
 }
 
 const weaponNames={sword:'Bicheon',spear:'Heuksal',bow:'Pacheon'};
 let timer,previousWeapon='sword',previousUsable=usable(),previousLevel=Number($('level').value);
 function rawStats(s){
- const st=H.stats(s);
- $('quick-results').replaceChildren(
-  quickCard('Maximum HP',fmt(st.HP),'','heart','stat'),
-  quickCard('Maximum MP',fmt(st.MP),'','droplet','stat'),
-  quickCard('Physical Balance',fmt(st.physicalBalance)+'%','','swords','stat'),
-  quickCard('Magical Balance',fmt(st.magicalBalance)+'%','','flame','stat'),
-  quickCard('Physical Damage','—','Enter weapon tooltip values','sword','damage'),
-  quickCard('Critical Physical','—','Enter weapon tooltip values','target','damage'),
-  quickCard('Nuke Damage','—','Enter weapon tooltip values','spark','damage')
- );
+ H.verify(s);
+ renderQuick({stats:H.stats(s)});
 }
 function refreshWeapon(){
  const key=$('weapon').value;
- $('basicPercentDisplay').textContent=({sword:60,spear:117,bow:84})[key]+'%';
- $('setup-label').textContent=weaponNames[key]+' Normal Attack · Manyang Lv1';
- $('weapon-warning').textContent=key==='sword' ? 'Copper Sword (+7) sample. Replace with your server weapon stats.' : 'Enter your weapon tooltip values below. Copper Sword sample values are not reused.';
+ $('setup-label').textContent=weaponNames[key]+' · Target Lv'+$('targetLevel').value;
 }
 function update(){
  clearTimeout(timer);syncPoints();refreshWeapon();
+ $('secondary-fields').hidden=$('imbueMode').value!=='secondary';
+ for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
+ for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+($('apMode').value==='displayed'?' character AP ':' weapon AP ')+(k.endsWith('Min')?'min':'max');
+ for(const key of ['physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])$(key).parentElement.hidden=$('apMode').value==='displayed';
  try {
   const s=read(),results=H.compare(s);
   renderQuick(results.selected);
-  $('comparison').replaceChildren(
-    column('Full STR',results.fullSTR),
-    column('Your Build',results.selected,true),
-    column('Full INT',results.fullINT)
-  );
+  $('comparison').replaceChildren(...(results.fullSTR ? [
+    column('Full STR',results.fullSTR), column('Your Build',results.selected,true), column('Full INT',results.fullINT)
+  ] : [column('Your Build',results.selected,true), row('Comparison','Enter weapon tooltip and reinforcement values to compare other builds.')]));
   $('error').hidden=true;
  } catch(e) {
   $('comparison').replaceChildren();
@@ -163,26 +152,13 @@ function update(){
 function readStats(){
  const s=H.defaults(),v=id=>$(id).value.trim()===''?NaN:$(id).valueAsNumber;
  s.level=v('level');
- s.maxLevelReached=Math.max(s.level,v('maxLevelReached'));
+ s.maxLevelReached=v('maxLevelReached');
  s.unspentPoints=v('unspentPoints');
  s.allocatedSTR=v('strPoints');
  for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate'])s[k]=v(k);
  return s;
 }
-function clearWeaponDemo(key){
- if(key==='sword'){
-  const w=defaults.weapon;
-  for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
-   $(f).value=String(w[f]);
-  $('bonusSTR').value=String(defaults.bonusSTR);
-  $('bonusINT').value=String(defaults.bonusINT);
- } else {
-  for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
-   $(f).value='';
-  $('bonusSTR').value='0';$('bonusINT').value='0';
- }
- previousWeapon=key;refreshWeapon();
-}
+function selectWeapon(key){previousWeapon=key;refreshWeapon();}
 $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{
  if(e.target.id==='level'||e.target.id==='unspentPoints'){
@@ -192,11 +168,11 @@ $('hybrid-form').addEventListener('input',e=>{
   }
   syncPoints(true);
  }
- if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)clearWeaponDemo($('weapon').value);
+ if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)selectWeapon($('weapon').value);
  clearTimeout(timer);timer=setTimeout(update,90);
 });
 $('weapon').addEventListener('change',()=>{
- if($('weapon').value!==previousWeapon)clearWeaponDemo($('weapon').value);
+ if($('weapon').value!==previousWeapon)selectWeapon($('weapon').value);
  update();
 });
 document.querySelectorAll('[data-ratio]').forEach(button=>button.addEventListener('click',()=>{

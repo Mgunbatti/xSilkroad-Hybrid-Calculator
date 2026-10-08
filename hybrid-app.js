@@ -3,6 +3,49 @@ const H=globalThis.HybridEngine;
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
 const defaults=H.defaults();
+
+/* Database-backed selectors; the optional manual fields remain available. */
+let skillDatabase=null;
+const kindFor={physicalSkill:'physical',imbue:'imbue',nuke:'nuke'};
+function masterFor(k){return Number($('mastery-'+({physicalSkill:'physical',imbue:'imbue',nuke:'nuke'}[k])).value);}
+function listFor(k){
+ const family=k==='physicalSkill'?({sword:'SWORD',spear:'SPEAR',bow:'BOW'}[$('weapon').value]):null;
+ return globalThis.SilkroadSkillCatalog.groups(skillDatabase,kindFor[k],family,masterFor(k));
+}
+function option(value,label){const o=document.createElement('option');o.value=value;o.textContent=label;return o;}
+function refreshSkillSelectors(){
+ if(!skillDatabase)return;
+ for(const k of Object.keys(kindFor)){
+  const select=$(k+'-group'),previous=select.value;
+  const choices=listFor(k);
+  select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,x.group.replace(/^SKILL_CH_/,'').replace(/_/g,' '))));
+  if(choices.some(c=>c.group===previous))select.value=previous;
+  const lvl=$(k+'-skillLevel'),old=lvl.value;
+  lvl.replaceChildren(option('','Auto: highest available'));
+  const group=select.value;
+  if(group){
+   const list=globalThis.SilkroadSkillCatalog.availableLevels(skillDatabase,group,masterFor(k));
+   for(const rec of list)lvl.append(option(String(rec[1]),'Lv '+rec[1]+' · Mastery '+rec[2]));
+   if(list.some(rec=>String(rec[1])===old))lvl.value=old;
+  }
+  const row=selectedSkill(k);
+  if(row){
+   $(k+'-min').value=String(row.powerMin);
+   $(k+'-max').value=String(row.powerMax);
+   $(k+'-rate').value=String(row.primaryDamagePercent);
+  }
+ }
+}
+function selectedSkill(k){
+ if(!skillDatabase)return null;
+ return globalThis.SilkroadSkillCatalog.select(skillDatabase,$(k+'-group').value,masterFor(k),$(k+'-skillLevel').value||null);
+}
+fetch('data/chinese-skills.json').then(response=>{
+ if(!response.ok)throw Error('Skill catalogue HTTP '+response.status);
+ return response.json();
+}).then(data=>{skillDatabase=data;refreshSkillSelectors();update();})
+.catch(err=>{const e=$('error');e.hidden=false;e.textContent='Skill catalogue unavailable: '+err.message+' (manual entry still works).';});
+
 function field(parent,id,label,value,min=0,step='any'){
   const wrap=document.createElement('div');wrap.className='field';
   const lab=document.createElement('label');lab.htmlFor=id;lab.textContent=label;
@@ -65,6 +108,7 @@ function read(){
    for(const f of ['min','max','rate'])s[k][f]=val(k+'-'+f);
  }
  s.imbue.rate=val('imbueRate');
+ for(const k of Object.keys(kindFor)){const chosen=selectedSkill(k);if(chosen){s[k].enabled=true;s[k].min=chosen.powerMin;s[k].max=chosen.powerMax;s[k].rate=chosen.primaryDamagePercent;if(k==='nuke')s.nuke.secondaryPercent=chosen.secondaryPercent;}}
  s.target.level=val('targetLevel');
  for(const f of ['physicalDefense','magicalDefense','physicalAbsorption','magicalAbsorption'])s.target[f]=val(f);
  s.damageBonuses.physical=val('physicalBonus');s.damageBonuses.magical=val('magicalBonus');
@@ -91,7 +135,7 @@ function quickCard(label, value, note='',icon='activity',kind='stat'){
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
-const damageOutputs=[['normal','Normal Attack'],['physicalSkill','Physical Skill'],['nuke','Nuke'],['normalImbue','Normal + Imbue'],['physicalSkillImbue','Physical Skill + Imbue']];
+const damageOutputs=[['normal','Normal Attack'],['physicalSkill','Physical Skill'],['nuke','Nuke'],['nukeImbue','Nuke + Imbue'],['normalImbue','Normal + Imbue'],['physicalSkillImbue','Physical Skill + Imbue']];
 function renderQuick(result){
  const st=result.stats;
  const cards=[quickCard('HP',fmt(st.HP)),quickCard('MP',fmt(st.MP)),quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),quickCard('Magical Balance',fmt(st.magicalBalance)+'%')];
@@ -129,7 +173,7 @@ function refreshWeapon(){
  $('setup-label').textContent=weaponNames[key]+' · Target Lv'+$('targetLevel').value;
 }
 function update(){
- clearTimeout(timer);syncPoints();refreshWeapon();
+ clearTimeout(timer);syncPoints();refreshWeapon();refreshSkillSelectors();
  $('secondary-fields').hidden=$('imbueMode').value!=='secondary';
  for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+($('apMode').value==='displayed'?' character AP ':' weapon AP ')+(k.endsWith('Min')?'min':'max');

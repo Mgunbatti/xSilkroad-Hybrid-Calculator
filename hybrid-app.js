@@ -30,12 +30,20 @@ const starterSeries={
  nuke:'SKILL_CH_FIRE_GIGONGSUL_F'
 };
 let applyStarterSkills=true;
+const autoSeries={physicalSkill:true,imbue:true,nuke:true};
 function pickEligibleFamilyGroup(k,preferred){
  const all=listFor(k);
  if(all.some(x=>x.group===preferred))return preferred;
  const parent=preferred.slice(0,preferred.lastIndexOf('_')+1);
  const books=all.filter(x=>x.group.startsWith(parent));
- if(!books.length)return '';
+ if(!books.length){
+  // E.g. player switches from Bow to Heuksal: use strongest eligible
+  // physical skill in the new weapon tree instead of stale Bow data.
+  if(k!=='physicalSkill'||!all.length)return '';
+  return all.sort((a,b)=>
+    b.max.requiredMasteryLevel-a.max.requiredMasteryLevel ||
+    b.max.skillLevel-a.max.skillLevel)[0].group;
+ }
  return books.sort((a,b)=>
    b.max.requiredMasteryLevel-a.max.requiredMasteryLevel ||
    b.max.skillLevel-a.max.skillLevel)[0].group;
@@ -43,6 +51,7 @@ function pickEligibleFamilyGroup(k,preferred){
 function selectStarterSkills(){
  if(!skillDatabase)return;
  for(const [k,preferred] of Object.entries(starterSeries)){
+  if(!autoSeries[k])continue;
   const selection=pickEligibleFamilyGroup(k,preferred);
   if(selection)$(k+'-group').value=selection;
  }
@@ -332,12 +341,17 @@ $('hybrid-form').addEventListener('input',e=>{
  if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)selectWeapon($('weapon').value);
  if(e.target.id==='skillProfile'){switchSkillProfile();return;}
  for(const k of Object.keys(kindFor)){
+  if(e.target.id===k+'-group'||e.target.id===k+'-skillLevel')autoSeries[k]=false;
   if(e.target.id===k+'-group' && !$(k+'-group').value){
    // Selecting Manual values is an explicit reset, not an instruction
    // to keep the hidden, previously database-filled AP and percentage.
    for(const field of ['min','max','rate'])$(k+'-'+field).value='';
   }
  }
+ // When the level or learned mastery changes, auto-picked skills follow the
+ // strongest unlocked book; user-selected skills/levels remain untouched.
+ if(e.target.id==='level'||e.target.id==='weapon'||e.target.id.startsWith('mastery-'))
+  selectStarterSkills();
  clearTimeout(timer);timer=setTimeout(update,90);
 });
 $('weapon').addEventListener('change',()=>{
@@ -358,6 +372,7 @@ $('reset').addEventListener('click',()=>{
  }
  previousWeapon='bow';
  previousUsable=usable();previousLevel=Number($('level').value);
+ for(const k of Object.keys(autoSeries))autoSeries[k]=true;
  applyStarterSkills=true;
  syncPoints();switchSkillProfile();
 });

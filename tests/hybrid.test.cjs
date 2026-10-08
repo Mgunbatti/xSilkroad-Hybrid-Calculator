@@ -160,3 +160,60 @@ test('nuke plus imbue must have secondary descriptor rate and preserve original 
  s.nuke.secondaryPercent=0;
  assert.deepEqual(H.calculate(s).nukeImbue.normal,H.calculate(s).nuke.normal);
 });
+
+test('in-game Fire Cold Lightning magical skills regression preserves measured residuals',()=>{
+ const catalogue=require('../data/chinese-skills.json');
+ const C=require('../skill-catalog.js');
+ const cases=[
+  {
+   name:'Flame Wave Lv12 + Poison Fire Force Lv4',
+   skill:C.select(catalogue,'SKILL_CH_FIRE_GIGONGSUL_A',52,12),
+   imbue:{min:187,max:312,rate:100},
+   observed:{off:5236,on:6776},
+   modeled:{off:5233,on:6772}
+  },
+  {
+   name:'Snow Storm Ice Shot Lv12 + Ice Ocean Force Lv4',
+   skill:C.select(catalogue,'SKILL_CH_COLD_GIGONGSUL_A',52,12),
+   imbue:{min:153,max:229,rate:100},
+   observed:{off:4393,on:5848},
+   modeled:{off:4390,on:5844}
+  },
+  {
+   // Shock Lion Shout is a Lightning magical-attack group (CHUNDUNG), not
+   // a STORM-group Nuke in this first catalogue. Keep its verified DB
+   // parameters explicit until generic magical-attack skills are wired up.
+   name:'Shock Lion Shout Lv9 + Thunder King Force Lv4',
+   skill:{id:1350,group:'SKILL_CH_LIGHTNING_CHUNDUNG_A',
+     skillLevel:9,requiredMasteryLevel:33,
+     primaryDamagePercent:100,powerMin:106,powerMax:196,secondaryPercent:33},
+   imbue:{min:149,max:276,rate:100},
+   observed:{off:1714,on:2311},
+   modeled:{off:1713,on:2310}
+  }
+ ];
+ for(const scenario of cases){
+  const s=fixture();
+  s.masteries.nuke=52;
+  s.masteries.imbue=52;
+  Object.assign(s.nuke,{
+   enabled:true,min:scenario.skill.powerMin,max:scenario.skill.powerMax,
+   rate:scenario.skill.primaryDamagePercent,
+   secondaryPercent:scenario.skill.secondaryPercent
+  });
+  Object.assign(s.imbue,{enabled:true,...scenario.imbue});
+  const result=H.calculate(s);
+  const off=result.nuke.normal.max,on=result.nukeImbue.normal.max;
+  assert.equal(off,scenario.modeled.off,scenario.name+' modeled off');
+  assert.equal(on,scenario.modeled.on,scenario.name+' modeled on');
+  assert.deepEqual(result.nukeImbue.normal,result.nukeImbue.critical,
+   scenario.name+' nuke has no physical critical component');
+  const measuredSecondary=scenario.observed.on-scenario.observed.off;
+  const calculatedSecondary=on-off;
+  assert.ok(Math.abs(measuredSecondary-calculatedSecondary)<=1,
+   scenario.name+' secondary contribution discrepancy above one');
+  // Native endpoint discrepancies remain visible; do not fit them away.
+  assert.ok(scenario.observed.off>=off&&scenario.observed.on>=on);
+  assert.ok(scenario.observed.off-off<=4&&scenario.observed.on-on<=4);
+ }
+});

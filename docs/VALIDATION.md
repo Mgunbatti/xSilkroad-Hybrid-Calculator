@@ -37,3 +37,31 @@ The engine preserves documented constants, four-call rand15 distribution, channe
 The same engine powers physical-only, magical-only and hybrid calculations. For an ordinary landed attack with at least one enabled channel, a zero final total becomes 1 after summing truncated channels and applying the target ratio (section 6.3). Individual channel values can still be zero; they are never separately promoted to 1. With both channels disabled, the calculator reports 0. This applies equally to normal and critical results, endpoint ranges and simulations.
 
 For hybrid builds, enable both channels and enter their actual AP, mastery, skill percentages and bonuses. Critical affects only the physical channel before truncation. Non-default special hit factors remain unsupported; this release does not add unverified weapon rates or claim full secondary imbue caller emulation.
+
+## Hybrid calculator implementation (2026-10-08)
+
+This section supersedes the older UI/secondary-mode scope statements above. The original binary specification and `engine.js` are unchanged. [HYBRID_FORMULA.md](HYBRID_FORMULA.md) describes the historical input mapping and optional recovered secondary caller precisely. Sword **and blade** normal descriptors are 60% per user requirements. No AttackRate or Parry controls are needed for ranges; internal neutral values do not affect endpoints.
+
+The UI starts without equipment or enabled demo skills. Learned mastery levels are explicit and independent of character level. Physical skills no longer replace normal attacks. All five outputs appear separately, with critical ranges for the four outputs containing physical damage. Character displayed AP can be entered for live validation; alternative-build AP is unavailable in that mode.
+
+### Manyang Lv1, Lv52 character
+
+Recorded STR301, INT148; physical AP1315–1568; magical AP1041–1207; Heuksal/Fire mastery52; Poison Fire Force Lv4 AP187–312, tooltip100%. Target PD7, MD10, both absorption1%. No extra damage buffs were supplied. The calculated balances are 118.36158% and 62.71186%; the recorded 118% / 62% UI values are not substituted for the unrounded stat-derived balances.
+
+| Quantity | Model | Recorded | Model minus recorded |
+|---|---:|---:|---:|
+| Normal maximum without imbue | 2782 | 2783 | -1 (-0.036%) |
+| Normal maximum with imbue | 4952 | 4954 | -2 (-0.040%) |
+| Imbue maximum contribution | 2170 | approximately 2171 (difference of observed maxima) | approximately -1 |
+| Critical with imbue | 6415–7734 | one hit of 7186 | inside range; not an endpoint validation |
+
+Observed noncritical arrays:
+
+- Off: `[2655,2783,2721,2667,2729,2709,2783,2500,2783]`
+- On: `[4954,4666,4697,4658,4954,4717,4612,4954]`
+
+Three values in each array exceed the corresponding theoretical maximum by 1 or 2. These discrepancies are explicitly asserted in tests, not hidden by tolerances or correction factors. The 7186 critical sample is below the model maximum; calling it the verified maximum would be unjustified. Difference-of-maxima is only an analytical contribution estimate, not a paired-roll measurement.
+
+For Set 1/A the user notes the pre-integer result is approximately **2757.64**. Rounding that final value would give 2758, but the documented core conversion truncates to 2757. Rounded displayed AP hiding a fractional underlying AP is another plausible explanation. Neither explanation has been independently established; no global change from truncation to rounding is made. Native float/x87 details and unrecorded inputs remain possible causes.
+
+Validation includes 32 deterministic unit/regression tests and a real Chrome browser test covering the five results, empty defaults, mastery bounds, weapon-switch data preservation, reset, and a 390px mobile viewport. Physical skill/nuke and secondary mode are formula regressions, not additional live-game validations.

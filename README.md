@@ -1,25 +1,23 @@
-# xSilkroad Damage Calculator
+# xSilkroad Hybrid Calculator
 
-Existing English-only GitHub Pages calculator. The responsive interface, charts and formula link are preserved. Static HTML/CSS/JavaScript; no dependencies or bundler.
+Static Chinese STR/INT build calculator with five separate results: normal attack, physical skill, nuke, normal + imbue, and physical skill + imbue. Critical ranges double only the physical component before core truncation.
 
-- [Live calculator](https://mgunbatti.github.io/xSilkroad-Hybrid-Calculator/)
-- [Recovered server formula](docs/DAMAGE_FORMULA.md)
-- [Benchmarks and assumptions](docs/VALIDATION.md)
+Equipment and optional skill inputs start empty. Enter Weapon Values and learned mastery **levels** in Advanced Settings. Mastery levels must not exceed character level; zero explicitly means no learned mastery. Changing the normal-attack mastery preserves all manual equipment, skill and stat entries.
 
-Normal attacks select weapon-specific default descriptors: Chinese spear/glaive 117%, sword 60%, bow 84%, based on the user's DB confirmations. Other weapons require a manual provisional value. Active skills accept user AP, descriptor percentage and mastery without multiplying a basic-attack percentage. Displayed AP already includes mastery; only added skill AP receives mastery in that mode.
+Normal descriptors are Bicheon sword/blade 60%, Heuksal spear/glaive 117%, Pacheon bow 84%. Physical skills and nukes use their own rates. The default historical imbue mapping uses the attacking normal/physical skill rate and applies elemental mastery to magical AP plus imbue AP. The alternative recovered secondary caller requires explicit descriptor secondary percentages; see [the adapter specification](docs/HYBRID_FORMULA.md).
 
-Manyang defaults to Lv1, PD7, MD10, PAR/MAR 1%. Parry 100 is explicitly an assumption, not a mapping of DB ER27. Edit it before relying on simulated distributions. Advanced unknown modifiers have visible neutral defaults.
+Weapon-tooltip mode estimates AP from weapon values and reinforcement and compares Full STR / Your Build / Full INT. Character-displayed-AP mode accepts the selected build's AP directly; other builds cannot be predicted from that AP alone, so their comparisons are unavailable. Physical displayed AP is never mastered twice. Magical AP in this adapter is the base before the selected elemental mastery.
+
+[Recovered binary formula](docs/DAMAGE_FORMULA.md) · [Validation and known differences](docs/VALIDATION.md)
 
 ## Verification
 
-`npm test` or `node --test tests/engine.test.cjs tests/live-game.cjs` runs deterministic engine and benchmark regressions. `npm run build` syntax-checks the static scripts; there is no generated bundle. Open index.html or serve the repository root for browser testing.
+- `npm test` (or `node --test tests/*.cjs`): core, hybrid and live-game regressions.
+- `npm run build`: script syntax checks; there is no generated bundle.
+- `npm install` then `npm run test:ui`: Playwright end-to-end test with installed Chrome. Set `BROWSER_CHANNEL=msedge` to use Edge. Screenshots are written to the system temporary directory, or `UI_ARTIFACT_DIR` when specified.
 
-The benchmarks produce theoretical maxima 2757, 2082, 1888, 1441 and 2782; observations are 2758, 2082, 1888, 1442 and 2783. A is calibration/reference, not independent prediction. One-damage discrepancies are documented and not corrected with fitted constants.
+The runtime has no package dependencies. Open `index.html` directly or serve this directory. Browser tests cover blank defaults, the five results, manual data preservation, mastery validation, reset and mobile overflow.
 
-## Deployment
+## Publication
 
-The existing GitHub Pages build publishes main. Keep index.html, style.css, app.js, engine.js, .nojekyll and docs together at the root. All links remain relative. No repository or deployment redesign is required.
-
-## Hybrid release v1.0.0
-
-Uses the same tested engine as the Pages calculator. Enable physical and magical channels for hybrid calculations. Zero damage is promoted to 1 only for an ordinary landed attack with an enabled channel, after the channel sum and target ratio; both channels disabled gives 0. Source ZIP/TAR archives in the GitHub Release contain the complete static calculator. Extract and open index.html.
+Review the working branch/PR before merging. The existing main branch may publish GitHub Pages; this implementation does not merge or deploy automatically.

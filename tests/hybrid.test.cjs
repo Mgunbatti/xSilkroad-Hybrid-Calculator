@@ -2,141 +2,233 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const H=require('../hybrid-engine.js');
 const D=require('../engine.js');
-
-
-test('default demo is Manyang + Copper Sword + starter Fire skills',()=>{
+function fixture(){
  const s=H.defaults();
- assert.equal(s.target.level,1);
- assert.equal(s.target.physicalDefense,7);
- assert.equal(s.target.physicalAbsorption,1);
- assert.equal(s.weapon.key,'sword');
- assert.deepEqual([s.weapon.physicalMin,s.weapon.physicalMax],[88,96]);
- assert.deepEqual([s.weapon.magicalMin,s.weapon.magicalMax],[150,167]);
- assert.deepEqual([s.imbue.enabled,s.imbue.min,s.imbue.max,s.imbue.rate],[true,16,26,100]);
- assert.deepEqual([s.nuke.enabled,s.nuke.min,s.nuke.max,s.nuke.rate],[true,123,205,250]);
- const demo=H.calculate(s);
- assert.ok(demo.physical.normal.max>0);
- assert.ok(demo.physical.critical.max>demo.physical.normal.max);
- assert.ok(demo.physicalImbue.normal.max>=demo.physical.normal.max);
- assert.ok(demo.physicalImbue.critical.max>demo.physicalImbue.normal.max);
- assert.ok(demo.nuke.normal.max>0);
- // There is NO distinct nuke critical for pure magical damage.
- assert.deepEqual(demo.nuke.critical,demo.nuke.normal);
+ Object.assign(s,{level:52,maxLevelReached:52,allocatedSTR:153,bonusSTR:77,bonusINT:77});
+ Object.assign(s.weapon,{key:'spear',apMode:'displayed',physicalMin:1315,physicalMax:1568,magicalMin:1041,magicalMax:1207});
+ s.masteries={physical:52,imbue:52,nuke:40};
+ Object.assign(s.imbue,{enabled:true,min:187,max:312});
+ Object.assign(s.physicalSkill,{enabled:true,min:574,max:777,rate:350});
+ Object.assign(s.nuke,{enabled:true,min:123,max:205,rate:250});
+ return s;
+}
+function core(s){
+ const d=D.defaults(),st=H.stats(s),ap=H.attackPower(s,st);
+ Object.assign(d,{level:s.level,maxLevel:s.maxLevelReached,str:st.STR,int:st.INT,weapon:s.weapon.key,targetLevel:s.target.level});
+ Object.assign(d.physical,{min:ap.physical[0],max:ap.physical[1],mastery:s.masteries.physical,defense:s.target.physicalDefense,absorption:s.target.physicalAbsorption});
+ Object.assign(d.magical,{apMode:'raw',min:ap.magical[0],max:ap.magical[1],defense:s.target.magicalDefense,absorption:s.target.magicalAbsorption});
+ return d;
+}
+test('blank defaults never calculate demo equipment or enabled skills',()=>{
+ const s=H.defaults(),r=H.calculate(s);
+ assert.equal(s.bonusSTR,0);assert.equal(s.bonusINT,0);assert.equal(r.ap,null);
+ for(const k of ['normal','normalImbue','physicalSkill','physicalSkillImbue','nuke'])assert.equal(r[k],null);
+ s.weapon.physicalMin=50;assert.doesNotThrow(()=>H.calculate(s));
+});
+test('five independent outputs; learned masteries map onto correct AP sources',()=>{
+ const s=fixture(),r=H.calculate(s),d=core(s);
+ assert.deepEqual([r.stats.STR,r.stats.INT],[301,148]);
+ assert.deepEqual(r.normal,D.ranges(d));
+ d.attackMode='active';Object.assign(d.physical,{skillMin:574,skillMax:777,skillPercent:350});
+ assert.deepEqual(r.physicalSkill,D.ranges(d));
+ d.physical.enabled=false;Object.assign(d.magical,{enabled:true,skillMin:123,skillMax:205,skillPercent:250,mastery:40});
+ assert.deepEqual(r.nuke,D.ranges(d));assert.deepEqual(r.nuke.normal,r.nuke.critical);
+ Object.assign(d.physical,{enabled:true});Object.assign(d.magical,{skillMin:187,skillMax:312,skillPercent:350,mastery:52});
+ assert.deepEqual(r.physicalSkillImbue,D.ranges(d));
+});
+test('normal descriptors affect normal+imbue only; skills and nuke remain independent',()=>{
+ const s=fixture(),before=H.calculate(s);
+ for(const [key,rate] of Object.entries(D.basicSkills)){
+  s.weapon.key=key;const r=H.calculate(s),d=core(s);
+  assert.equal(D.descriptorPercent(d,'physical'),rate);
+  assert.deepEqual(r.normal,D.ranges(d));
+  assert.deepEqual(r.physicalSkill,before.physicalSkill);assert.deepEqual(r.nuke,before.nuke);
+  assert.deepEqual(r.physicalSkillImbue,before.physicalSkillImbue);
+  Object.assign(d.magical,{enabled:true,skillMin:187,skillMax:312,mastery:52,skillPercent:rate});
+  assert.deepEqual(r.normalImbue,D.ranges(d));
+ }
+});
+test('physical skill never replaces normal; disabled skills ignore stale incomplete fields',()=>{
+ const s=fixture(),before=H.calculate(s);
+ for(const k of ['physicalSkill','nuke','imbue'])Object.assign(s[k],{enabled:false,min:null,max:null,rate:null});
+ const r=H.calculate(s);assert.deepEqual(r.normal,before.normal);
+ for(const k of ['physicalSkill','nuke','normalImbue','physicalSkillImbue'])assert.equal(r[k],null);
+});
+test('mastery is separate from level; displayed physical AP is not mastered twice',()=>{
+ const s=fixture(),a=H.calculate(s);s.masteries.physical=20;const b=H.calculate(s);
+ assert.deepEqual(a.normal,b.normal);assert.notDeepEqual(a.physicalSkill,b.physicalSkill);
+ assert.deepEqual(a.normalImbue,b.normalImbue);
+ s.masteries.imbue=10;const c=H.calculate(s);
+ assert.notDeepEqual(b.normalImbue,c.normalImbue);assert.deepEqual(b.nuke,c.nuke);
+ for(const value of [53,1.5,-1,null,NaN]){s.masteries.imbue=value;assert.throws(()=>H.calculate(s),/mastery level/);}
+});
+test('Manyang live arrays retain candid endpoint discrepancies and critical sample',()=>{
+ const s=fixture(),r=H.calculate(s);
+ const off=[2655,2783,2721,2667,2729,2709,2783,2500,2783];
+ const on=[4954,4666,4697,4658,4954,4717,4612,4954];
+ assert.equal(r.normal.normal.max,2782);assert.equal(r.normalImbue.normal.max,4952);
+ assert.equal(r.normalImbue.normal.max-r.normal.normal.max,2170);
+ assert.equal(r.normal.normal.max-Math.max(...off),-1);
+ assert.equal(r.normalImbue.normal.max-Math.max(...on),-2);
+ assert.equal(r.normalImbue.critical.max,7734);
+ assert.ok(7186>=r.normalImbue.critical.min && 7186<=r.normalImbue.critical.max);
+ assert.equal(off.filter(x=>x>r.normal.normal.max).length,3);
+ assert.equal(on.filter(x=>x>r.normalImbue.normal.max).length,3);
+});
+test('critical doubles only untruncated physical core, absorption and float stages preserved',()=>{
+ const s=fixture(),d=core(s);
+ Object.assign(d.magical,{enabled:true,skillMin:187,skillMax:312,mastery:52,skillPercent:117});
+ const r=H.calculate(s),hit=D.hitAt(d,100,100);
+ assert.equal(r.normalImbue.critical.max,hit.criticalPhysical+hit.magical);
+ s.target.physicalAbsorption=45;s.target.magicalAbsorption=30;
+ s.target.physicalDefense=221;s.target.magicalDefense=150;
+ assert.ok(H.calculate(s).normalImbue.normal.max<r.normalImbue.normal.max);
+ s.target.physicalDefense=s.target.magicalDefense=1e7;
+ assert.equal(H.calculate(s).normalImbue.normal.max,1);
+});
+test('recovered secondary caller uses its own percentage after core truncation',()=>{
+ const s=fixture();s.imbue.mode='secondary';
+ assert.throws(()=>H.calculate(s),/secondary percentage/);
+ s.weapon.secondaryPercent=117;s.physicalSkill.secondaryPercent=225;
+ const r=H.calculate(s),d=core(s);
+ Object.assign(d.magical,{enabled:true,skillMin:187,skillMax:312,mastery:52,skillPercent:100});
+ const m=D.channel(d,'magical',100),p=D.channel(d,'physical',100);
+ assert.equal(r.normalImbue.normal.max,p+Math.trunc(m*117/100));
+ s.weapon.secondaryPercent=0;assert.deepEqual(H.calculate(s).normalImbue,H.calculate(s).normal);
+ s.weapon.secondaryPercent=0xffffffff;assert.throws(()=>H.calculate(s),/overflow/);
+});
+test('recovered secondary mastery preserves unusual binary caller selection',()=>{
+ for(const [p,m,result] of [[52,20,52],[52,100,52],[90,100,90],[91,52,90],[100,110,110]])assert.equal(H.secondaryMastery(p,m),result);
+});
+test('displayed AP comparison is unavailable rather than reusing AP across builds',()=>{
+ const s=fixture(),r=H.compare(s);assert.equal(r.fullSTR,null);assert.equal(r.fullINT,null);
+ s.weapon.apMode='tooltip';Object.assign(s.weapon,{physicalReinforceMin:43.4,physicalReinforceMax:49.3,magicalReinforceMin:74.2,magicalReinforceMax:86});
+ const copy=structuredClone(s),c=H.compare(s);
+ assert.equal(c.fullSTR.stats.allocatedINT,0);assert.equal(c.fullINT.stats.allocatedSTR,0);
+ assert.ok(c.fullSTR.stats.HP>c.fullINT.stats.HP);assert.ok(c.fullINT.stats.MP>c.fullSTR.stats.MP);
+ assert.deepEqual(s,copy);
+});
+test('historical HP/MP, reinforcement and Devil regressions',()=>{
+ const s=H.defaults();Object.assign(s,{level:8,maxLevelReached:8,unspentPoints:21,allocatedSTR:0,bonusSTR:84,bonusINT:84});
+ Object.assign(s.weapon,{physicalMin:88,physicalMax:96,magicalMin:150,magicalMax:167,physicalReinforceMin:43.4,physicalReinforceMax:49.3,magicalReinforceMin:74.2,magicalReinforceMax:86});
+ const a=H.calculate(s);assert.deepEqual(a.ap.magical,[232,262]);
+ s.bonusINT+=5;s.bonusSTR+=5;const b=H.calculate(s);
+ assert.equal(b.stats.baseHP-a.stats.baseHP,57);assert.equal(b.stats.baseMP-a.stats.baseMP,57);assert.deepEqual(b.ap.magical,[236,267]);
+ Object.assign(s,{level:1,maxLevelReached:1,unspentPoints:0,allocatedSTR:0,bonusSTR:0,bonusINT:0,devilRate:250});
+ assert.equal(H.calculate(s).stats.HP,700);s.devilRate=12.5;assert.equal(H.calculate(s).stats.MP,225);
+});
+test('invalid data fails, disabled incomplete inputs and zero valid endpoints remain distinct',()=>{
+ const s=fixture();s.physicalSkill.min=null;assert.throws(()=>H.calculate(s),/physicalSkill min/);
+ s.physicalSkill.enabled=false;s.weapon.physicalMin=9999;assert.throws(()=>H.calculate(s),/Minimum weapon/);
+ s.weapon.physicalMin=0;s.weapon.physicalMax=0;assert.equal(H.calculate(s).normal.normal.max,1);
 });
 
-test('level 1 defaults, devil multiplies both HP and MP without changing balance',()=>{
- const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;s.bonusSTR=0;s.bonusINT=0;s.bonusSTR=0;s.bonusINT=0;
- const normal=H.calculate(s);assert.equal(normal.stats.HP,200);assert.equal(normal.stats.MP,200);
- s.devilRate=20;const devil=H.calculate(s);
- assert.equal(devil.stats.HP,240);assert.equal(devil.stats.MP,240);
- assert.equal(normal.stats.physicalBalance,devil.stats.physicalBalance);
- assert.equal(normal.stats.magicalBalance,devil.stats.magicalBalance);
+test('Chinese skill catalogue resolves families by learned mastery without leaking thousands of levels into UI',()=>{
+ const C=require('../skill-catalog.js'),catalog=require('../data/chinese-skills.json');
+ const nukes=C.groups(catalog,'nuke',null,255);
+ assert.equal(nukes.length,17);
+ const fire=C.groups(catalog,'nuke','FIRE',52);
+ const flame=C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',52);
+ assert.equal(flame.id,1459);
+ assert.deepEqual([flame.skillLevel,flame.primaryDamagePercent,flame.powerMin,flame.powerMax,flame.secondaryPercent],[12,250,304,506,83]);
+ assert.equal(C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',51).skillLevel,11);
+ assert.equal(C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',52,13),null);
+ assert.ok(fire.length>0);
+ const spear=C.groups(catalog,'physical','SPEAR',52);
+ assert.ok(spear.length>0);
+ for(const selected of spear)assert.ok(selected.max.requiredMasteryLevel<=52);
 });
-test('custom Devil rate supports high and fractional server percentages on HP and MP',()=>{
- const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;s.bonusSTR=0;s.bonusINT=0;
- const zero=H.calculate(s);
- s.devilRate=250;const high=H.calculate(s);
- assert.equal(high.stats.HP,700);
- assert.equal(high.stats.MP,700);
- assert.equal(high.stats.physicalBalance,zero.stats.physicalBalance);
- assert.equal(high.stats.magicalBalance,zero.stats.magicalBalance);
- s.devilRate=12.5;const fractional=H.calculate(s);
- assert.equal(fractional.stats.HP,225);
- assert.equal(fractional.stats.MP,225);
- for(const invalid of [-1,Infinity,1000001,NaN]){
-   s.devilRate=invalid;
-   assert.throws(()=>H.calculate(s),/Devil HP\/MP rate/);
+test('nuke plus imbue must have secondary descriptor rate and preserve original pure nuke',()=>{
+ const s=fixture();
+ const before=H.calculate(s);
+ assert.equal(before.nukeImbue,null);
+ s.nuke.secondaryPercent=83;
+ const result=H.calculate(s);
+ assert.deepEqual(result.nuke,before.nuke);
+ assert.ok(result.nukeImbue.normal.max>result.nuke.normal.max);
+ assert.deepEqual(result.nukeImbue.normal,result.nukeImbue.critical);
+ const d=core(s);
+ d.physical.enabled=false;
+ d.attackMode='active';
+ Object.assign(d.magical,{enabled:true,skillMin:123,skillMax:205,skillPercent:250,mastery:40});
+ const pure=D.channel(d,'magical',100);
+ const sec=core(s);
+ sec.physical.enabled=false;sec.attackMode='active';
+ Object.assign(sec.magical,{enabled:true,skillMin:187,skillMax:312,skillPercent:100,mastery:H.secondaryMastery(40,52)});
+ const expected=pure+Math.trunc(D.channel(sec,'magical',100)*83/100);
+ assert.equal(result.nukeImbue.normal.max,expected);
+ s.nuke.secondaryPercent=0;
+ assert.deepEqual(H.calculate(s).nukeImbue.normal,H.calculate(s).nuke.normal);
+});
+
+test('in-game Fire Cold Lightning magical skills regression preserves measured residuals',()=>{
+ const catalogue=require('../data/chinese-skills.json');
+ const C=require('../skill-catalog.js');
+ const cases=[
+  {
+   name:'Flame Wave Lv12 + Poison Fire Force Lv4',
+   skill:C.select(catalogue,'SKILL_CH_FIRE_GIGONGSUL_A',52,12),
+   imbue:{min:187,max:312,rate:100},
+   observed:{off:5236,on:6776},
+   modeled:{off:5233,on:6772}
+  },
+  {
+   name:'Snow Storm Ice Shot Lv12 + Ice Ocean Force Lv4',
+   skill:C.select(catalogue,'SKILL_CH_COLD_GIGONGSUL_A',52,12),
+   imbue:{min:153,max:229,rate:100},
+   observed:{off:4393,on:5848},
+   modeled:{off:4390,on:5844}
+  },
+  {
+   // Shock Lion Shout is a Lightning magical-attack group (CHUNDUNG), not
+   // a STORM-group Nuke in this first catalogue. Keep its verified DB
+   // parameters explicit until generic magical-attack skills are wired up.
+   name:'Shock Lion Shout Lv9 + Thunder King Force Lv4',
+   skill:{id:1350,group:'SKILL_CH_LIGHTNING_CHUNDUNG_A',
+     skillLevel:9,requiredMasteryLevel:33,
+     primaryDamagePercent:100,powerMin:106,powerMax:196,secondaryPercent:33},
+   imbue:{min:149,max:276,rate:100},
+   observed:{off:1714,on:2311},
+   modeled:{off:1713,on:2310}
+  }
+ ];
+ for(const scenario of cases){
+  const s=fixture();
+  s.masteries.nuke=52;
+  s.masteries.imbue=52;
+  Object.assign(s.nuke,{
+   enabled:true,min:scenario.skill.powerMin,max:scenario.skill.powerMax,
+   rate:scenario.skill.primaryDamagePercent,
+   secondaryPercent:scenario.skill.secondaryPercent
+  });
+  Object.assign(s.imbue,{enabled:true,...scenario.imbue});
+  const result=H.calculate(s);
+  const off=result.nuke.normal.max,on=result.nukeImbue.normal.max;
+  assert.equal(off,scenario.modeled.off,scenario.name+' modeled off');
+  assert.equal(on,scenario.modeled.on,scenario.name+' modeled on');
+  assert.deepEqual(result.nukeImbue.normal,result.nukeImbue.critical,
+   scenario.name+' nuke has no physical critical component');
+  const measuredSecondary=scenario.observed.on-scenario.observed.off;
+  const calculatedSecondary=on-off;
+  assert.ok(Math.abs(measuredSecondary-calculatedSecondary)<=1,
+   scenario.name+' secondary contribution discrepancy above one');
+  // Native endpoint discrepancies remain visible; do not fit them away.
+  assert.ok(scenario.observed.off>=off&&scenario.observed.on>=on);
+  assert.ok(scenario.observed.off-off<=4&&scenario.observed.on-on<=4);
  }
 });
 
-test('original Lv8 +5 STR and +5 INT produce observed 57 HP and 57 MP increments',()=>{
- const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=84;s.bonusINT=84;
- const before=H.stats(s);assert.equal(before.STR,111);assert.equal(before.INT,111);
- s.bonusSTR+=5;const afterSTR=H.stats(s);
- assert.equal(afterSTR.baseHP-before.baseHP,57);
- assert.equal(afterSTR.baseMP,before.baseMP);
- s.bonusINT+=5;const afterINT=H.stats(s);
- assert.equal(afterINT.baseMP-afterSTR.baseMP,57);
- assert.equal(afterINT.baseHP,afterSTR.baseHP);
-});
-test('magical AP tooltip reinforcement matches Lv8 111/116 INT screenshots',()=>{
- const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=84;s.bonusINT=84;
- const before=H.attackPower(s,H.stats(s));
- assert.deepEqual(before.magical,[232,262]);
- s.bonusINT=89;const after=H.attackPower(s,H.stats(s));
- assert.deepEqual(after.magical,[236,267]);
-});
-test('build comparisons preserve weapon and only move stat points',()=>{
- const s=H.defaults(),c=H.compare(s);
- assert.equal(c.fullSTR.stats.allocatedINT,0);
- assert.equal(c.fullINT.stats.allocatedSTR,0);
- assert.equal(c.selected.stats.allocatedSTR,s.allocatedSTR);
- assert.equal(c.fullSTR.stats.STR + c.fullSTR.stats.INT,c.fullINT.stats.STR+c.fullINT.stats.INT);
- assert.ok(c.fullSTR.stats.HP>c.fullINT.stats.HP);
- assert.ok(c.fullINT.stats.MP>c.fullSTR.stats.MP);
- assert.ok(c.fullSTR.stats.physicalBalance>=c.fullINT.stats.physicalBalance);
-});
-test('normal physical uses verified default skill descriptor not active skill rate',()=>{
- const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=84;s.bonusINT=84;s.weapon.key='sword';
- const x=H.calculate(s);
- const d=D.defaults();d.attackMode='basic';d.weapon='sword';
- assert.equal(D.descriptorPercent(d,'physical'),60);
- assert.equal(x.physical.normal.max>0,true);
- s.physicalSkill.enabled=true;s.physicalSkill.rate=280;
- const y=H.calculate(s);
- assert.notDeepEqual(y.physical.normal,x.physical.normal);
-});
-test('optional nuke and imbue results exist only when enabled',()=>{
- const s=H.defaults();s.nuke.enabled=false;s.imbue.enabled=false;
- assert.equal(H.calculate(s).nuke,null);
- assert.equal(H.calculate(s).physicalImbue,null);
- s.nuke.enabled=true;s.nuke.min=200;s.nuke.max=300;s.nuke.rate=280;
- s.imbue.enabled=true;s.imbue.min=10;s.imbue.max=20;s.imbue.rate=100;
- const result=H.calculate(s);
- assert.ok(result.nuke.normal.max>=1);
- assert.ok(result.physicalImbue.critical.max>=result.physicalImbue.normal.max);
-});
-test('prevents invalid or unverified build weapon descriptors',()=>{
- const s=H.defaults();s.weapon.key='blade';
- assert.doesNotThrow(()=>H.calculate(s));
- s.weapon.basicPercent=90;assert.doesNotThrow(()=>H.calculate(s));
- s.weapon.key='custom';assert.doesNotThrow(()=>H.calculate(s));
- s.allocatedSTR=999999;assert.throws(()=>H.calculate(s),/Allocated STR/);
-});
-
-
-test('Chinese weapon switch maps mastery and accepts Blade only with supplied rate',()=>{
- const s=H.defaults();
- for(const name of ['sword','spear','glaive','bow']) {
-  s.weapon.key=name;
-  assert.doesNotThrow(()=>H.calculate(s));
+test('vSRO profile retains three measured imbues and independently identifies Shock Lion Shout',()=>{
+ const C=require('../skill-catalog.js');
+ const vsro=require('../data/chinese-skills-vsro.json');
+ for(const [element,want] of Object.entries({FIRE:[187,312],COLD:[153,229],LIGHTNING:[149,276]})){
+  const skill=C.select(vsro,'SKILL_CH_'+element+'_GIGONGTA_C',52,4);
+  assert.deepEqual([skill.powerMin,skill.powerMax],want);
  }
- s.weapon.key='blade';
- s.weapon.basicPercent=undefined;
- assert.throws(()=>H.calculate(s),/Basic attack damage rate/);
- s.weapon.basicPercent=76;
- const result=H.calculate(s);
- assert.ok(result.physical.normal.max>=1);
- const pure=H.defaults();pure.nuke.enabled=true;
- assert.deepEqual(H.calculate(pure).nuke.normal,H.calculate(pure).nuke.critical);
-});
-
-test('UI offers only three Chinese normal attack masteries; skills remain independent',()=>{
- const fs=require('node:fs');
- const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
- const select=html.match(/<select id="weapon">([\s\S]*?)<\/select>/);
- assert.ok(select);
- const options=[...select[1].matchAll(/<option value="([^"]+)"/g)].map(x=>x[1]);
- assert.deepEqual(options,['sword','spear','bow']);
- assert.match(html,/Bicheon Normal Attack/);
- assert.match(html,/Heuksal Normal Attack/);
- assert.match(html,/Pacheon Normal Attack/);
- assert.match(html,/only to normal attacks/);
- for(const title of ['Physical Skill','Imbue','Nuke'])assert.ok(html.includes('<h3>'+title+'</h3>'));
- const app=fs.readFileSync(require('node:path').join(__dirname,'../hybrid-app.js'),'utf8');
- assert.match(app,/sword:60,spear:117,bow:84/);
- assert.doesNotMatch(app,/basicPercent'\)\.value/);
+ const shout=C.select(vsro,'SKILL_CH_LIGHTNING_CHUNDUNG_A',52,9);
+ assert.deepEqual([shout.powerMin,shout.powerMax,shout.primaryDamagePercent,shout.secondaryPercent],[106,196,100,33]);
+ for(const [element,skillLevel,want] of [['FIRE',12,[304,506,250,83]],['COLD',12,[154,231,250,83]]]){
+  const selected=C.select(vsro,'SKILL_CH_'+element+'_GIGONGSUL_A',52,skillLevel);
+  assert.deepEqual([selected.powerMin,selected.powerMax,selected.primaryDamagePercent,selected.secondaryPercent],want);
+ }
 });

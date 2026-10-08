@@ -10,7 +10,8 @@
   <link rel="stylesheet" href="hybrid.css?v=20261008-7">
   <script defer src="engine.js?v=20261008-7"></script>
   <script defer src="hybrid-engine.js?v=20261008-7"></script>
-  <script defer src="hybrid-app.js?v=20261008-7"></script>
+  <script defer src="skill-catalog.js?v=20261008-8"></script>
+  <script defer src="hybrid-app.js?v=20261008-8"></script>
 </head>
 <body>
 <header>
@@ -86,6 +87,8 @@
           </section>
           <section class="config-section">
             <h3>Imbue</h3>
+            <div class="field"><label for="imbue-group">Skill series (database)</label><select id="imbue-group"><option value="">Manual values</option></select></div>
+            <div class="field"><label for="imbue-skillLevel">Learned skill level</label><select id="imbue-skillLevel"><option value="">Auto: highest available</option></select></div>
             <label class="toggle"><input id="imbue-enabled" type="checkbox"> Include Imbue</label>
             <div class="fields" id="imbue-fields"></div><label for="imbueMode">Imbue calculation</label><select id="imbueMode"><option value="attack">Historical attack SkillRate</option><option value="secondary">Recovered secondary caller</option></select><div class="fields" id="secondary-fields" hidden></div>
           </section>
@@ -105,11 +108,15 @@
         <div class="config-stack">
           <section class="config-section">
             <h3>Physical Skill</h3>
+            <div class="field"><label for="physicalSkill-group">Skill series (database)</label><select id="physicalSkill-group"><option value="">Manual values</option></select></div>
+            <div class="field"><label for="physicalSkill-skillLevel">Learned skill level</label><select id="physicalSkill-skillLevel"><option value="">Auto: highest available</option></select></div>
             <label class="toggle"><input id="physicalSkill-enabled" type="checkbox"> Include Physical Skill</label>
             <div class="fields" id="physicalSkill-fields"></div>
           </section>
           <section class="config-section">
             <h3>Nuke</h3>
+            <div class="field"><label for="nuke-group">Skill series (database)</label><select id="nuke-group"><option value="">Manual values</option></select></div>
+            <div class="field"><label for="nuke-skillLevel">Learned skill level</label><select id="nuke-skillLevel"><option value="">Auto: highest available</option></select></div>
             <label class="toggle"><input id="nuke-enabled" type="checkbox"> Include Nuke</label>
             <div class="fields" id="nuke-fields"></div>
           </section>

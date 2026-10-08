@@ -66,8 +66,7 @@
     integer(s.allocatedSTR, 'Allocated STR points', 0, allPoints - s.unspentPoints);
     for (const key of ['bonusSTR', 'bonusINT', 'extraHP', 'extraMP'])
       integer(s[key], key, 0, 100000000);
-    if (![0, 10, 15, 20, 25].includes(s.devilRate))
-      throw new Error('Devil HP/MP rate must be 0, 10, 15, 20 or 25.');
+    finite(s.devilRate, 'Devil HP/MP rate', 0, 1000000);
     finite(s.attackRate, 'Attack rate');
     const w = s.weapon;
     if (w.key !== 'custom' && !(w.key in Damage.basicSkills))

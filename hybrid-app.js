@@ -230,4 +230,4 @@ $('reset').addEventListener('click',()=>{
  previousUsable=usable();previousLevel=Number($('level').value);
  $('basicPercent').value='60';syncPoints();update();
 });
-syncPoints();update();
+$('basicPercent').value='60';syncPoints();update();

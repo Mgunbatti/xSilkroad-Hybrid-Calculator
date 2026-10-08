@@ -36,6 +36,7 @@ function usable(){
  return Math.max(0,total-unspent);
 }
 let previousUsable=usable();
+let previousLevel=Number($('level').value);
 function syncPoints(rescale=false){
  const n=usable(), slider=$('strPoints');
  const prior=Number(slider.value);
@@ -115,8 +116,10 @@ function update(){
 $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{
  if(e.target.id==='level'||e.target.id==='unspentPoints'){
-  if(e.target.id==='level' && $('maxLevelReached').value===String(Number(e.target.value)-1))
-   $('maxLevelReached').value=e.target.value;
+  if(e.target.id==='level'){
+   if(Number($('maxLevelReached').value)===previousLevel) $('maxLevelReached').value=e.target.value;
+   previousLevel=Number(e.target.value);
+  }
   syncPoints(true);
  }
  clearTimeout(timer);timer=setTimeout(update,100);
@@ -129,6 +132,6 @@ $('reset').addEventListener('click',()=>{
   const el=$(id);
   if(el.type==='checkbox')el.checked=value;else el.value=value;
  }
- previousUsable=usable();syncPoints();update();
+ previousUsable=usable();previousLevel=Number($('level').value);syncPoints();update();
 });
 syncPoints();update();

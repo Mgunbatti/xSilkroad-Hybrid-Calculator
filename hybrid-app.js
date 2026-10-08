@@ -10,7 +10,13 @@ const kindFor={physicalSkill:'physical',imbue:'imbue',nuke:'nuke'};
 function masterFor(k){return Number($('mastery-'+({physicalSkill:'physical',imbue:'imbue',nuke:'nuke'}[k])).value);}
 function listFor(k){
  const family=k==='physicalSkill'?({sword:'SWORD',spear:'SPEAR',bow:'BOW'}[$('weapon').value]):null;
- return globalThis.SilkroadSkillCatalog.groups(skillDatabase,kindFor[k],family,masterFor(k));
+ const C=globalThis.SilkroadSkillCatalog;
+ const regular=C.groups(skillDatabase,kindFor[k],family,masterFor(k));
+ if(k!=='nuke')return regular;
+ // Lightning's CHUNDUNG ("Shock Lion Shout") is a magical offensive skill,
+ // not a STORM-family nuke. It belongs in the magical-skill selector too.
+ return [...regular,...C.groups(skillDatabase,'magical',null,masterFor(k))]
+   .sort((a,b)=>a.group.localeCompare(b.group));
 }
 function option(value,label){const o=document.createElement('option');o.value=value;o.textContent=label;return o;}
 function refreshSkillSelectors(){
@@ -40,11 +46,36 @@ function selectedSkill(k){
  if(!skillDatabase)return null;
  return globalThis.SilkroadSkillCatalog.select(skillDatabase,$(k+'-group').value,masterFor(k),$(k+'-skillLevel').value||null);
 }
-fetch('data/chinese-skills.json').then(response=>{
- if(!response.ok)throw Error('Skill catalogue HTTP '+response.status);
- return response.json();
-}).then(data=>{skillDatabase=data;refreshSkillSelectors();update();})
-.catch(err=>{const e=$('error');e.hidden=false;e.textContent='Skill catalogue unavailable: '+err.message+' (manual entry still works).';});
+const skillProfiles={};
+const profileSources={
+ original:'data/chinese-skills.json',
+ vsro:'data/chinese-skills-vsro.json'
+};
+async function loadSkillProfile(which){
+ if(!Object.prototype.hasOwnProperty.call(profileSources,which))
+   throw new Error('Unknown skill data profile.');
+ if(!skillProfiles[which]){
+  const response=await fetch(profileSources[which]);
+  if(!response.ok)throw new Error('Skill catalogue HTTP '+response.status);
+  const data=await response.json();
+  if(data.schemaVersion!==1||!data.groups)throw new Error('Invalid skill catalogue');
+  skillProfiles[which]=data;
+ }
+ skillDatabase=skillProfiles[which];
+ refreshSkillSelectors();
+ update();
+}
+let profileLoadSequence=0;
+function switchSkillProfile(){
+ const selected=$('skillProfile').value,sequence=++profileLoadSequence;
+ skillDatabase=null;
+ loadSkillProfile(selected).catch(err=>{
+  if(sequence!==profileLoadSequence)return;
+  const e=$('error');e.hidden=false;
+  e.textContent='Skill catalogue unavailable: '+err.message+' (manual entry still works).';
+ });
+}
+switchSkillProfile();
 
 function field(parent,id,label,value,min=0,step='any'){
   const wrap=document.createElement('div');wrap.className='field';
@@ -213,6 +244,7 @@ $('hybrid-form').addEventListener('input',e=>{
   syncPoints(true);
  }
  if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)selectWeapon($('weapon').value);
+ if(e.target.id==='skillProfile'){switchSkillProfile();return;}
  clearTimeout(timer);timer=setTimeout(update,90);
 });
 $('weapon').addEventListener('change',()=>{
@@ -233,6 +265,6 @@ $('reset').addEventListener('click',()=>{
  }
  previousWeapon='sword';
  previousUsable=usable();previousLevel=Number($('level').value);
- syncPoints();update();
+ syncPoints();switchSkillProfile();
 });
 syncPoints();update();

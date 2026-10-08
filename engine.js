@@ -106,7 +106,10 @@
   }
   function total(s,p,m) {
     // §6.3: low DWORD product before division by target ratio BYTE.
-    return Math.trunc(((p+m)*s.targetRatio >>> 0)/100);
+    const damage=Math.trunc(((p+m)*s.targetRatio >>> 0)/100);
+    // Ordinary landed attacks promote a zero FINAL total to one. Do not
+    // floor each channel: hybrid damage must sum the truncated cores first.
+    return damage===0 && (s.physical.enabled || s.magical.enabled)?1:damage;
   }
   function hitAt(s, physicalT, magicalT) {
     const physical=channel(s,'physical',physicalT);

@@ -1,6 +1,6 @@
 # Validation and assumptions
 
-The authoritative source is the recovered original SR_GameServer.exe document [DAMAGE_FORMULA.md](DAMAGE_FORMULA.md), especially sections 3 and 6.3. It is preserved unchanged. The referenced ChatGPT conversation returned content-reference placeholders instead of the final TypeScript model; that model could not be independently retrieved. This update follows the recovered document and the explicit corrections supplied with this request.
+The authoritative source is the recovered original SR_GameServer.exe document [DAMAGE_FORMULA.md](DAMAGE_FORMULA.md), especially sections 3 and 6.3. It is preserved unchanged. The final TypeScript candidate was subsequently supplied and compared directly: all normal and critical A-E endpoints match the published engine. The server document remains authoritative for float storage, DWORD behavior and conditional minimum damage. Unverified weapon entries in that candidate are not promoted to verified DB values.
 
 ## Normal attack descriptors
 
@@ -30,4 +30,10 @@ Displayed C-screen AP already includes mastery; only added skill AP receives mas
 
 Named bonus rows are convenience labels: enter values there only when their mapping to the same additive avatar/modifier stage is known. Applicable class-3 and party percentages are separate additions based on pre-avatar damage. Advanced fields expose target coefficient, event, attacker/target multipliers and final target ratio. Unavailable values are explicitly neutral (0 percent/event, direct factor 1, target ratio 100%). There are no fitted constants or global basic-attack factor.
 
-The engine preserves documented constants, four-call rand15 distribution, channel-independent rolls, absorption before defense, descriptor and modifier order, physical-only critical hit factor, the second higher-level bonus, balance, channel truncation and final target-ratio DWORD behavior. Float32 stage storage is modeled; this is not a complete x87 emulator or a replay of the native RNG sequence. Unknown skill-variable mappings, special flags, walls, summons, transformed targets, secondary-skill caller rules and conditional zero-to-one promotion remain outside this ordinary player calculator.
+The engine preserves documented constants, four-call rand15 distribution, channel-independent rolls, absorption before defense, descriptor and modifier order, physical-only critical hit factor, the second higher-level bonus, balance, channel truncation and final target-ratio DWORD behavior. Float32 stage storage is modeled; this is not a complete x87 emulator or a replay of the native RNG sequence. Unknown skill-variable mappings, special flags, walls, summons, transformed targets, secondary-skill caller rules remain outside this ordinary player calculator.
+
+## Hybrid release v1.0.0
+
+The same engine powers physical-only, magical-only and hybrid calculations. For an ordinary landed attack with at least one enabled channel, a zero final total becomes 1 after summing truncated channels and applying the target ratio (section 6.3). Individual channel values can still be zero; they are never separately promoted to 1. With both channels disabled, the calculator reports 0. This applies equally to normal and critical results, endpoint ranges and simulations.
+
+For hybrid builds, enable both channels and enter their actual AP, mastery, skill percentages and bonuses. Critical affects only the physical channel before truncation. Non-default special hit factors remain unsupported; this release does not add unverified weapon rates or claim full secondary imbue caller emulation.

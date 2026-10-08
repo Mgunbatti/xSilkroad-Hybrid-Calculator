@@ -50,3 +50,27 @@ test('Manyang DB absorption is one percent; ER is not silently used as parry',()
   assert.notEqual(s.parry,27);
   const a=E.ranges(s);s.parry=500;assert.deepEqual(E.ranges(s),a);
 });
+
+test('ordinary landed attacks floor the final total once; no channels stays zero',()=>{
+  const s=E.defaults();s.physical.defense=s.magical.defense=1e6;
+  for(const [physical,magical] of [[true,false],[false,true],[true,true],[false,false]]) {
+    s.physical.enabled=physical;s.magical.enabled=magical;
+    const h=E.hitAt(s,100,100),expected=physical||magical?1:0;
+    assert.equal(h.physical,0);assert.equal(h.magical,0);
+    assert.equal(h.normal,expected);assert.equal(h.critical,expected);
+    assert.deepEqual(E.ranges(s).normal,{min:expected,max:expected});
+    assert.equal(E.simulate(s,100,E.seeded(1)).average,expected);
+  }
+  s.physical.enabled=true;s.physical.defense=0;s.targetRatio=0;
+  assert.equal(E.hitAt(s,100,100).normal,1);
+});
+test('hybrid truncates channels separately, applies ratio after sum and crit only to physical',()=>{
+  const s=E.defaults();s.attackMode='active';s.level=s.targetLevel=s.maxLevel=3;s.str=40;s.int=40;
+  s.magical.enabled=true;s.targetRatio=50;
+  Object.assign(s.physical,{min:100.75,max:100.75,mastery:0,defense:0,absorption:0});
+  Object.assign(s.magical,{min:50.75,max:50.75,mastery:0,defense:0,absorption:0});
+  const h=E.hitAt(s,100,100);
+  assert.deepEqual(h,{physical:100,magical:50,criticalPhysical:201,normal:75,critical:125});
+  s.physical.defense=1e6;s.targetRatio=100;
+  assert.equal(E.hitAt(s,100,100).normal,50); // zero physical must not add a phantom 1
+});

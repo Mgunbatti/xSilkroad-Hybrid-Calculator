@@ -19,3 +19,7 @@ The benchmarks produce theoretical maxima 2757, 2082, 1888, 1441 and 2782; obser
 ## Deployment
 
 The existing GitHub Pages build publishes main. Keep index.html, style.css, app.js, engine.js, .nojekyll and docs together at the root. All links remain relative. No repository or deployment redesign is required.
+
+## Hybrid release v1.0.0
+
+Uses the same tested engine as the Pages calculator. Enable physical and magical channels for hybrid calculations. Zero damage is promoted to 1 only for an ordinary landed attack with an enabled channel, after the channel sum and target ratio; both channels disabled gives 0. Source ZIP/TAR archives in the GitHub Release contain the complete static calculator. Extract and open index.html.

@@ -9,7 +9,7 @@
   const nz = v => v === 0 ? 1 : v;
   // Default-skill DB percentages confirmed by the user's database checks.
   // No inferred values for other weapons; those require manual input.
-  const basicSkills = Object.freeze({spear:117, glaive:117, sword:60, bow:84});
+  const basicSkills = Object.freeze({spear:117, glaive:117, sword:60, blade:60, bow:84});
   function descriptorPercent(s, name) {
     return s.attackMode==='basic' && name==='physical'
       ? (basicSkills[s.weapon] ?? s.basicPercent) : s[name].skillPercent;

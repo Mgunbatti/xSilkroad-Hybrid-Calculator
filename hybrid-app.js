@@ -143,10 +143,13 @@ function field(parent,id,label,value,min=0,step='any'){
   Object.assign(input,{id,type:'number',value:value===null?'':String(value),min:String(min),step,required:true});
   wrap.append(lab,input);parent.append(wrap);
 }
+// This is an explicitly labeled, historical single-value example, not
+// fabricated C-screen min/max data. Replace it with a real character's AP.
+const demoAP={physicalMin:3012,physicalMax:3012,magicalMin:2638,magicalMax:2638};
 for (const [key,label] of [
  ['physicalMin','Physical AP min'],['physicalMax','Physical AP max'],
  ['magicalMin','Magical AP min'],['magicalMax','Magical AP max']
-]) field($('weapon-fields'),key,label,defaults.weapon[key]);
+]) field($('weapon-fields'),key,label,demoAP[key]);
 for (const [key,label] of [
  ['physicalReinforceMin','Physical reinforce min %'],['physicalReinforceMax','Physical reinforce max %'],
  ['magicalReinforceMin','Magical reinforce min %'],['magicalReinforceMax','Magical reinforce max %']
@@ -281,6 +284,8 @@ function update(){
  for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
  $('character-ap-heading').textContent=$('apMode').value==='displayed'?'Character Attack Power':'Weapon Attack Power';
  $('ap-source-note').textContent=$('apMode').value==='displayed'?'(C screen)':'(tooltip)';
+ $('ap-demo-note').hidden=$('apMode').value!=='displayed' ||
+  !Object.entries(demoAP).every(([field,value])=>Number($(field).value)===value);
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+' AP '+(k.endsWith('Min')?'min':'max');
  $('reinforcement-fields').hidden=$('apMode').value==='displayed';
  try {

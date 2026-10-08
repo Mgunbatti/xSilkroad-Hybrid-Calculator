@@ -3,6 +3,27 @@ const assert=require('node:assert/strict');
 const H=require('../hybrid-engine.js');
 const D=require('../engine.js');
 
+
+test('default demo is Manyang + Copper Sword + starter Fire skills',()=>{
+ const s=H.defaults();
+ assert.equal(s.target.level,1);
+ assert.equal(s.target.physicalDefense,7);
+ assert.equal(s.target.physicalAbsorption,1);
+ assert.equal(s.weapon.key,'sword');
+ assert.deepEqual([s.weapon.physicalMin,s.weapon.physicalMax],[88,96]);
+ assert.deepEqual([s.weapon.magicalMin,s.weapon.magicalMax],[150,167]);
+ assert.deepEqual([s.imbue.enabled,s.imbue.min,s.imbue.max,s.imbue.rate],[true,16,26,100]);
+ assert.deepEqual([s.nuke.enabled,s.nuke.min,s.nuke.max,s.nuke.rate],[true,123,205,250]);
+ const demo=H.calculate(s);
+ assert.ok(demo.physical.normal.max>0);
+ assert.ok(demo.physical.critical.max>demo.physical.normal.max);
+ assert.ok(demo.physicalImbue.normal.max>=demo.physical.normal.max);
+ assert.ok(demo.physicalImbue.critical.max>demo.physicalImbue.normal.max);
+ assert.ok(demo.nuke.normal.max>0);
+ // There is NO distinct nuke critical for pure magical damage.
+ assert.deepEqual(demo.nuke.critical,demo.nuke.normal);
+});
+
 test('level 1 defaults, devil multiplies both HP and MP without changing balance',()=>{
  const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;
  const normal=H.calculate(s);assert.equal(normal.stats.HP,200);assert.equal(normal.stats.MP,200);

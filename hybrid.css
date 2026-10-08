@@ -146,3 +146,10 @@ button:focus-visible,summary:focus-visible{outline:2px solid #58a6ff}
 .controls-panel .character-ap-fields .field input,.controls-panel .extra-stats .field input{width:100%;min-width:0}
 .config-section #reinforcement-fields[hidden]{display:none!important}
 @media(max-width:480px){.controls-panel .character-ap-fields{gap:8px}.controls-panel .ap-heading{margin-bottom:8px}}
+
+/* Compare each attack immediately with the same attack + imbue. */
+.quick-results{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.quick-card.stat,.quick-card.damage,.quick-card.optional{grid-column:span 1}
+.quick-card.damage{min-height:90px}
+.ap-demo-note{font-size:11px;color:#9198a1;line-height:1.45;margin:9px 0 14px}
+@media(max-width:440px){.quick-results{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-card.stat,.quick-card.damage,.quick-card.optional{grid-column:span 1}.quick-card.damage{min-height:92px}.quick-card strong{font-size:17px}}

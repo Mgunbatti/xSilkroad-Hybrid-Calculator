@@ -11,6 +11,15 @@ function field(parent,id,label,value,min=0,max=1000000000,step='any',hint='') {
   div.append(lab,input);parent.append(div);fields.push(id);
 }
 const initial=E.defaults();
+field($('basic-fields'),'basicPercent','Manual basic descriptor % (provisional)',100);
+field($('advanced-fields'),'targetRatio','Final target ratio %',100,0,255,'1');
+for(const name of ['physical','magical']) {
+  for(const [key,label,value,min] of [
+    ['classBonus','Applicable class-3 bonus %',0,0],['partyBonus','Applicable party bonus %',0,0],
+    ['targetCoefficient','Target coefficient (direct)',1,0],['event','Event value (1 + value)',0,-1],
+    ['attackerMultiplier','Attacker multiplier (direct)',1,0],['targetMultiplier','Target multiplier (direct)',1,0]
+  ]) field($('advanced-fields'),name+'-'+key,`${name}: ${label}`,value,min);
+}
 for(const [key,label,min,max,hint] of [
   ['level','Current level',1,255,'Current character level.'],
   ['maxLevel','Max level reached',1,255,'Highest level reached by this character, not the server level cap.'],
@@ -28,9 +37,9 @@ for(const name of ['physical','magical']) {
     field($(name+'-fields'),name+'-'+key,label,initial[name][key],0,key==='mastery'?255:1000000,key==='mastery'?'1':'any');
 }
 for(const [key,label,value,min,max] of [
-  ['targetLevel','Level',1,1,255],['parry','Parry rate',27,1,1000000],
+  ['targetLevel','Level',1,1,255],['parry','Parry rate (assumed; enter known value)',100,1,1000000],
   ['physical-defense','Physical defense',7,0,1000000],['magical-defense','Magical defense',10,0,1000000],
-  ['physical-absorption','Physical absorption %',0,0,1000000],['magical-absorption','Magical absorption %',0,0,1000000]
+  ['physical-absorption','Physical absorption %',1,0,1000000],['magical-absorption','Magical absorption %',1,0,1000000]
 ]) field($('target-fields'),key,label,value,min,max,key==='targetLevel'?'1':'any');
 const bonusNames=['Dress / Avatar','Premium','Devil','Balloon','Scroll','Other'];
 bonusNames.forEach((name,i)=>{
@@ -46,12 +55,14 @@ bonusNames.forEach((name,i)=>{
 function read() {
   if(!$('build').checkValidity()) throw new Error('Enter valid values in the highlighted fields.');
   const s=E.defaults(),v=id=>$(id).valueAsNumber;
+  s.attackMode=$('attack-mode').value;s.weapon=$('weapon').value;s.basicPercent=v('basicPercent');s.targetRatio=v('targetRatio');
   for(const k of ['level','maxLevel','str','int','attackRate','targetLevel','parry'])s[k]=v(k);
   for(const name of ['physical','magical']) {
     s[name].enabled=$(name+'-enabled').checked;
     s[name].apMode=$(name+'-apMode').value;
     for(const k of ['min','max','skillMin','skillMax','mastery','skillPercent','defense','absorption']) s[name][k]=v(name+'-'+k);
     s[name].bonus=bonusNames.reduce((sum,_,i)=>sum+v(`bonus-${name}-${i}`),0);
+    for(const k of ['classBonus','partyBonus','targetCoefficient','event','attackerMultiplier','targetMultiplier'])s[name][k]=v(name+'-'+k);
   }
   return E.validate(s);
 }
@@ -69,8 +80,19 @@ function chart(result) {
   el.append(svg('text',{x:965,y:277,'text-anchor':'end'},'Normal damage'));
 }
 let count=10000,timer;
+function syncAttack() {
+  const basic=$('attack-mode').value==='basic';
+  $('weapon').disabled=!basic;
+  $('basicPercent').disabled=!basic || $('weapon').value!=='custom';
+  for(const k of ['skillMin','skillMax','skillPercent'])$('physical-'+k).disabled=basic;
+  const percent=E.basicSkills[$('weapon').value];
+  $('attack-note').textContent=basic
+    ? (percent===undefined?'Manual basic descriptor: provisional until verified against your default skill record.':`Normal attack descriptor: ${percent}% (user-confirmed DB record).`)
+    : 'Active skill: uses your skill percentage only; no basic-attack multiplier.';
+}
 function update() {
   clearTimeout(timer);
+  syncAttack();
   try {
     const s=read(),ranges=E.ranges(s),result=E.simulate(s,count);
     const b=E.balances(s);
@@ -97,11 +119,11 @@ $('build').addEventListener('input',e=>{
 });
 $('target').addEventListener('change',()=>{
   if($('target').value==='manyang') {
-    for(const [key,value] of Object.entries({targetLevel:1,parry:27,'physical-defense':7,'magical-defense':10,'physical-absorption':0,'magical-absorption':0}))$(key).value=value;
+    for(const [key,value] of Object.entries({targetLevel:1,parry:100,'physical-defense':7,'magical-defense':10,'physical-absorption':1,'magical-absorption':1}))$(key).value=value;
   }else $('target-details').open=true;
   update();
 });
 document.querySelectorAll('[data-count]').forEach(button=>button.addEventListener('click',()=>{count=Number(button.dataset.count);update();}));
 const resetValues=Object.fromEntries(fields.map(id=>[id,$(id).value]));
-$('reset').addEventListener('click',()=>{for(const [id,value] of Object.entries(resetValues))$(id).value=value;for(const name of ['physical','magical'])$(name+'-apMode').value='displayed';$('physical-enabled').checked=true;$('magical-enabled').checked=false;$('target').value='manyang';$('target-details').open=false;count=10000;update();});
+$('reset').addEventListener('click',()=>{for(const [id,value] of Object.entries(resetValues))$(id).value=value;for(const name of ['physical','magical'])$(name+'-apMode').value='displayed';$('attack-mode').value='basic';$('weapon').value='spear';$('physical-enabled').checked=true;$('magical-enabled').checked=false;$('target').value='manyang';$('target-details').open=false;count=10000;update();});
 update();

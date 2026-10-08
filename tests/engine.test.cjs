@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const E=require('../engine.js');
-const rawDefaults=()=>{const s=E.defaults();s.physical.apMode='raw';s.physical.skillPercent=100;s.magical.apMode='raw';return s;};
+const rawDefaults=()=>{const s=E.defaults();s.attackMode='active';s.parry=27;s.physical.absorption=s.magical.absorption=0;s.physical.apMode='raw';s.physical.skillPercent=100;s.magical.apMode='raw';return s;};
 const near=(a,b,tolerance=1e-5)=>assert.ok(Math.abs(a-b)<tolerance,`${a} != ${b}`);
 test('Raw AP regression with explicit 100% descriptor: neutral Manyang is 15–19',()=>{
   const s=rawDefaults();near(E.balances(s).physical,.8);near(E.balances(s).magical,.55);

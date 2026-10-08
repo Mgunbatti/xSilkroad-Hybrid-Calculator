@@ -7,18 +7,29 @@
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const f32 = Math.fround;
   const nz = v => v === 0 ? 1 : v;
+  // Default-skill DB percentages confirmed by the user's database checks.
+  // No inferred values for other weapons; those require manual input.
+  const basicSkills = Object.freeze({spear:117, glaive:117, sword:60, bow:84});
+  function descriptorPercent(s, name) {
+    return s.attackMode==='basic' && name==='physical'
+      ? (basicSkills[s.weapon] ?? s.basicPercent) : s[name].skillPercent;
+  }
   const defaults = () => ({
-    level: 3, maxLevel: 3, str: 28, int: 22, attackRate: 37, targetLevel: 1, parry: 27,
+    attackMode:'basic', weapon:'spear', basicPercent:100,
+    level: 3, maxLevel: 3, str: 28, int: 22, attackRate: 37, targetLevel: 1, parry: 100,
     targetRatio: 100,
-    physical: {enabled:true, apMode:'displayed', min:24, max:29, skillMin:0, skillMax:0, mastery:3, skillPercent:130,
-      defense:7, absorption:0, bonus:0, targetCoefficient:1, event:0, attackerMultiplier:1, targetMultiplier:1},
+    physical: {enabled:true, apMode:'displayed', min:24, max:29, skillMin:0, skillMax:0, mastery:3, skillPercent:100,
+      defense:7, absorption:1, bonus:0, classBonus:0, partyBonus:0, targetCoefficient:1, event:0, attackerMultiplier:1, targetMultiplier:1},
     magical: {enabled:false, apMode:'displayed', min:0, max:0, skillMin:0, skillMax:0, mastery:0, skillPercent:100,
-      defense:10, absorption:0, bonus:0, targetCoefficient:1, event:0, attackerMultiplier:1, targetMultiplier:1}
+      defense:10, absorption:1, bonus:0, classBonus:0, partyBonus:0, targetCoefficient:1, event:0, attackerMultiplier:1, targetMultiplier:1}
   });
   function validate(s) {
     const finite = (v, name, min=0, max=Number.MAX_SAFE_INTEGER) => {
       if (!Number.isFinite(v) || v < min || v > max) throw new Error(`${name} must be between ${min} and ${max}.`);
     };
+    if(!['basic','active'].includes(s.attackMode)) throw new Error('Select basic attack or active skill.');
+    if(!(s.weapon in basicSkills) && s.weapon!=='custom') throw new Error('Select a known weapon or manual descriptor.');
+    finite(s.basicPercent,'Manual basic attack percentage');
     for (const k of ['level','maxLevel','targetLevel']) {
       finite(s[k], k, 1, 255);
       if (!Number.isInteger(s[k])) throw new Error(`${k} must be a whole number.`);
@@ -33,6 +44,7 @@
       if(!['displayed','raw'].includes(c.apMode)) throw new Error('AP mode must be displayed or raw.');
       if(typeof c.enabled !== 'boolean') throw new Error(`${name} channel must be enabled or disabled.`);
       for(const k of ['min','max','skillMin','skillMax','mastery','skillPercent','defense','absorption','bonus','targetCoefficient','attackerMultiplier','targetMultiplier']) finite(c[k],`${name} ${k}`);
+      finite(c.classBonus,`${name} class bonus`);finite(c.partyBonus,`${name} party bonus`);
       finite(c.event,`${name} event`,-1);
       if(c.mastery>255 || !Number.isInteger(c.mastery)) throw new Error('Mastery must be a whole number from 0 to 255.');
       if(c.min>c.max || c.skillMin>c.skillMax) throw new Error(`${name}: minimum cannot exceed maximum.`);
@@ -72,12 +84,17 @@
     // Displayed mode follows the user's C-screen mapping directly: AP already
     // includes mastery. Do not reverse it through an extra float conversion.
     const mastery=1+c.mastery/100;
-    const lo=c.apMode==='displayed'?f32(c.min+c.skillMin*mastery):f32(clamp(f32(c.min+c.skillMin),0,999999)*mastery);
-    const hi=c.apMode==='displayed'?f32(c.max+c.skillMax*mastery):f32(clamp(f32(c.max+c.skillMax),0,999999)*mastery);
+    const basic=s.attackMode==='basic' && name==='physical';
+    const skillMin=basic?0:c.skillMin,skillMax=basic?0:c.skillMax;
+    const lo=c.apMode==='displayed'?f32(c.min+skillMin*mastery):f32(clamp(f32(c.min+skillMin),0,999999)*mastery);
+    const hi=c.apMode==='displayed'?f32(c.max+skillMax*mastery):f32(clamp(f32(c.max+skillMax),0,999999)*mastery);
     const v=f32(lo+(hi-lo)*clamp(t,0,100)/100);
     let d=f32(Math.max(v/(1+c.absorption/100)-c.defense,0));
-    d=f32(d*c.skillPercent/100);
+    d=f32(d*descriptorPercent(s,name)/100);
+    // Conditional class-3 and party amounts use d0, before avatar percentage.
+    const extra=f32(f32(d*c.classBonus/100)+f32(d*c.partyBonus/100));
     d=f32(d*(1+c.bonus/100));
+    d=f32(d+extra);
     d=f32(d*nz(c.targetCoefficient));
     d=f32(d*(1+c.event));
     d=f32(d*(name==='physical' && critical?2:1));
@@ -124,7 +141,7 @@
     return ()=>{ seed=(seed+0x6D2B79F5)|0; let t=Math.imul(seed^(seed>>>15),1|seed);
       t^=t+Math.imul(t^(t>>>7),61|t);return ((t^(t>>>14))>>>0)/4294967296; };
   }
-  const api={defaults,validate,balances,levelBonus,ratio,roll,channel,total,hitAt,ranges,sample,simulate,seeded};
+  const api={basicSkills,descriptorPercent,defaults,validate,balances,levelBonus,ratio,roll,channel,total,hitAt,ranges,sample,simulate,seeded};
   if(typeof module==='object' && module.exports) module.exports=api;
   else root.DamageEngine=api;
 })(globalThis);

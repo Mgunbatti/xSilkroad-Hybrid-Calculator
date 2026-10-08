@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/engine.test.cjs tests/live-game.cjs",
-    "test:live": "node --test tests/live-game.cjs"
+    "test:live": "node --test tests/live-game.cjs",
+    "build": "node --check engine.js && node --check app.js"
   }
 }
-

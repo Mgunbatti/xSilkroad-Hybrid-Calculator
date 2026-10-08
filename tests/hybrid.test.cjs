@@ -217,3 +217,18 @@ test('in-game Fire Cold Lightning magical skills regression preserves measured r
   assert.ok(scenario.observed.off-off<=4&&scenario.observed.on-on<=4);
  }
 });
+
+test('vSRO profile retains three measured imbues and independently identifies Shock Lion Shout',()=>{
+ const C=require('../skill-catalog.js');
+ const vsro=require('../data/chinese-skills-vsro.json');
+ for(const [element,want] of Object.entries({FIRE:[187,312],COLD:[153,229],LIGHTNING:[149,276]})){
+  const skill=C.select(vsro,'SKILL_CH_'+element+'_GIGONGTA_C',52,4);
+  assert.deepEqual([skill.powerMin,skill.powerMax],want);
+ }
+ const shout=C.select(vsro,'SKILL_CH_LIGHTNING_CHUNDUNG_A',52,9);
+ assert.deepEqual([shout.powerMin,shout.powerMax,shout.primaryDamagePercent,shout.secondaryPercent],[106,196,100,33]);
+ for(const [element,skillLevel,want] of [['FIRE',12,[304,506,250,83]],['COLD',12,[154,231,250,83]]]){
+  const selected=C.select(vsro,'SKILL_CH_'+element+'_GIGONGSUL_A',52,skillLevel);
+  assert.deepEqual([selected.powerMin,selected.powerMax,selected.primaryDamagePercent,selected.secondaryPercent],want);
+ }
+});

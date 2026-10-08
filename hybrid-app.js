@@ -11,8 +11,8 @@ function field(parent,id,label,value,min=0,step='any'){
   wrap.append(lab,input);parent.append(wrap);
 }
 for (const [key,label] of [
- ['physicalMin','Physical AP min'],['physicalMax','Physical AP max'],
- ['magicalMin','Magical AP min'],['magicalMax','Magical AP max'],
+ ['physicalMin','Physical weapon AP min'],['physicalMax','Physical weapon AP max'],
+ ['magicalMin','Magical weapon AP min'],['magicalMax','Magical weapon AP max'],
  ['physicalReinforceMin','Physical reinforce min %'],['physicalReinforceMax','Physical reinforce max %'],
  ['magicalReinforceMin','Magical reinforce min %'],['magicalReinforceMax','Magical reinforce max %']
 ]) field($('weapon-fields'),key,label,defaults.weapon[key]);
@@ -28,15 +28,13 @@ for(const [key,label,value] of [
  ['physicalBonus','Physical damage bonus %',0],['magicalBonus','Magical damage bonus %',0]
 ]) field($('target-fields'),key,label,value,key==='targetLevel'||key==='parry'?1:0,key==='targetLevel'?'1':'any');
 const ids=[...document.querySelectorAll('#hybrid-form input, #hybrid-form select')].map(e=>e.id);
-const initialValues=Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(''+id).checked:$(id).value]));
+const initialValues=Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]));
 function usable(){
  const lv=Number($('level').value);
  const total=Math.max(0,(lv-1)*3);
  const unspent=Math.min(total,Math.max(0,Number($('unspentPoints').value)||0));
  return Math.max(0,total-unspent);
 }
-let previousUsable=usable();
-let previousLevel=Number($('level').value);
 function syncPoints(rescale=false){
  const n=usable(), slider=$('strPoints');
  const prior=Number(slider.value);
@@ -87,7 +85,7 @@ function quickCard(label, value, note=''){
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
-function renderQuick(result){
+function renderQuick(result, status='') {
  const s=result.stats;
  const cards=[
   quickCard('STR / INT',fmt(s.STR)+' / '+fmt(s.INT)),
@@ -99,8 +97,7 @@ function renderQuick(result){
   quickCard('Physical Critical',damageRange(result.physical,true)),
   quickCard('Physical + Imbue',damageRange(result.physicalImbue),'Demo magical contribution; imbue caller not verified'),
   quickCard('Physical + Imbue Critical',damageRange(result.physicalImbue,true)),
-  quickCard('Magical Nuke',damageRange(result.nuke),'Lv1 demo; editable'),
-  quickCard('Nuke Critical','Not applicable','Pure magical nuke has no physical crit stage')
+  quickCard('Magical Nuke',damageRange(result.nuke),'Lv1 demo; editable')
  ];
  $('quick-results').replaceChildren(...cards);
 }
@@ -124,40 +121,116 @@ function column(title,result,selected=false){
  if(result.nuke)c.append(row('Nuke',damageRange(result.nuke)));
  return c;
 }
-let timer;
+
+const weaponNames={
+ sword:'Bicheon · Sword',blade:'Bicheon · Blade',
+ spear:'Heuksal · Spear',glaive:'Heuksal · Glaive',
+ bow:'Pacheon · Bow',custom:'Custom weapon'
+};
+let timer,previousWeapon='sword',previousUsable=usable(),previousLevel=Number($('level').value);
+function rawStats(s){
+ const st=H.stats(s);
+ $('quick-results').replaceChildren(
+  quickCard('STR / INT',fmt(st.STR)+' / '+fmt(st.INT)),
+  quickCard('Maximum HP',fmt(st.HP)),
+  quickCard('Maximum MP',fmt(st.MP)),
+  quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),
+  quickCard('Magical Balance',fmt(st.magicalBalance)+'%'),
+  quickCard('Physical Attack','—','Enter weapon stats to calculate'),
+  quickCard('Physical Critical','—','Enter weapon stats to calculate'),
+  quickCard('Physical + Imbue','—','Enter weapon stats to calculate'),
+  quickCard('Magical Nuke','—','Enter weapon stats to calculate')
+ );
+}
+function refreshWeapon(){
+ const key=$('weapon').value;
+ const provisional=key==='blade'||key==='custom';
+ $('manual-rate-wrap').hidden=!provisional;
+ $('setup-label').textContent=weaponNames[key]+(key==='sword'?' (+7 demo)':'')+' · Manyang Lv1';
+ if(provisional) {
+  $('weapon-warning').textContent=key==='blade'
+    ? 'Blade default attack % has not been verified. Enter your server percentage and Blade tooltip values.'
+    : 'Enter your weapon basic attack % and tooltip values.';
+ } else if(key!=='sword'){
+  $('weapon-warning').textContent='Enter '+weaponNames[key]+' tooltip values. Copper Sword values are not reused.';
+ }else{
+  $('weapon-warning').textContent='Sample: Copper Sword (+7). Your server may use different values.';
+ }
+}
 function update(){
- clearTimeout(timer);syncPoints();
- $('manual-rate-wrap').hidden=$('weapon').value!=='custom';
- try{
+ clearTimeout(timer);syncPoints();refreshWeapon();
+ try {
   const s=read(),results=H.compare(s);
   renderQuick(results.selected);
   $('comparison').replaceChildren(
-   column('Full STR',results.fullSTR),
-   column('Your Build',results.selected,true),
-   column('Full INT',results.fullINT)
+    column('Full STR',results.fullSTR),
+    column('Your Build',results.selected,true),
+    column('Full INT',results.fullINT)
   );
   $('error').hidden=true;
- }catch(e){$('error').hidden=false;$('error').textContent=e.message;$('comparison').replaceChildren();$('quick-results').replaceChildren();}
+ } catch(e) {
+  $('comparison').replaceChildren();
+  try { rawStats(readStats()); }
+  catch(_) { $('quick-results').replaceChildren(); }
+  $('error').hidden=false;
+  $('error').textContent=e.message;
+ }
+}
+function readStats(){
+ const s=H.defaults(),v=id=>$(id).value.trim()===''?NaN:$(id).valueAsNumber;
+ s.level=v('level');
+ s.maxLevelReached=Math.max(s.level,v('maxLevelReached'));
+ s.unspentPoints=v('unspentPoints');
+ s.allocatedSTR=v('strPoints');
+ for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate'])s[k]=v(k);
+ return s;
+}
+function clearWeaponDemo(key){
+ if(key==='sword'){
+  const w=defaults.weapon;
+  for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
+    $(f).value=String(w[f]);
+  $('bonusSTR').value=String(defaults.bonusSTR);
+  $('bonusINT').value=String(defaults.bonusINT);
+ }else {
+  for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
+    $(f).value='';
+  $('bonusSTR').value='0';$('bonusINT').value='0';
+ }
+ $('basicPercent').value='';
+ previousWeapon=key;
+ refreshWeapon();
 }
 $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{
  if(e.target.id==='level'||e.target.id==='unspentPoints'){
   if(e.target.id==='level'){
-   if(Number($('maxLevelReached').value)===previousLevel) $('maxLevelReached').value=e.target.value;
+   if(Number($('maxLevelReached').value)===previousLevel)$('maxLevelReached').value=e.target.value;
    previousLevel=Number(e.target.value);
   }
   syncPoints(true);
  }
- clearTimeout(timer);timer=setTimeout(update,100);
+ if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)clearWeaponDemo($('weapon').value);
+ clearTimeout(timer);timer=setTimeout(update,90);
+});
+$('weapon').addEventListener('change',()=>{
+ if($('weapon').value!==previousWeapon)clearWeaponDemo($('weapon').value);
+ update();
 });
 document.querySelectorAll('[data-ratio]').forEach(button=>button.addEventListener('click',()=>{
  $('strPoints').value=String(Math.round(usable()*Number(button.dataset.ratio)));update();
 }));
+$('open-customize').addEventListener('click',()=>{
+ $('customize').open=true;
+ $('customize').scrollIntoView({behavior:'smooth',block:'start'});
+});
 $('reset').addEventListener('click',()=>{
  for(const [id,value] of Object.entries(initialValues)){
   const el=$(id);
   if(el.type==='checkbox')el.checked=value;else el.value=value;
  }
- previousUsable=usable();previousLevel=Number($('level').value);syncPoints();update();
+ previousWeapon='sword';
+ previousUsable=usable();previousLevel=Number($('level').value);
+ syncPoints();update();
 });
 syncPoints();update();

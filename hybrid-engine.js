@@ -34,8 +34,8 @@
     maxLevelReached: 100,
     unspentPoints: 0,
     allocatedSTR: 264,           // 8:1, at Lv100: 297 points total
-    bonusSTR: 0,
-    bonusINT: 0,
+    bonusSTR: 7,                // Copper Sword +7 sample tooltip
+    bonusINT: 7,
     extraHP: 0,
     extraMP: 0,
     devilRate: 0,
@@ -47,10 +47,10 @@
       physicalReinforceMin: 43.4, physicalReinforceMax: 49.3,
       magicalReinforceMin: 74.2, magicalReinforceMax: 86
     },
-    // Leave these disabled until a user enters THEIR skill tooltip.
+    // Historical Lv1 Fire skill tooltip sample: editable, not server-verified.
     physicalSkill: { enabled: false, min: 0, max: 0, rate: 100, mastery: 0 },
-    imbue: { enabled: false, min: 0, max: 0, rate: 100, mastery: 0 },
-    nuke: { enabled: false, min: 0, max: 0, rate: 100, mastery: 0 },
+    imbue: { enabled: true, min: 16, max: 26, rate: 100, mastery: 0 },
+    nuke: { enabled: true, min: 123, max: 205, rate: 250, mastery: 0 },
     target: {
       level: 1, parry: 100, physicalDefense: 7, magicalDefense: 10,
       physicalAbsorption: 1, magicalAbsorption: 1

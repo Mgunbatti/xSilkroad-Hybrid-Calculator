@@ -7,6 +7,18 @@ const defaults=H.defaults();
 /* Database-backed selectors; the optional manual fields remain available. */
 let skillDatabase=null;
 const kindFor={physicalSkill:'physical',imbue:'imbue',nuke:'nuke'};
+const knownSkillNames={
+ SKILL_CH_FIRE_GIGONGSUL_A:'Flame Wave – Arrow',
+ SKILL_CH_COLD_GIGONGSUL_A:'Snow Storm – Ice Shot',
+ SKILL_CH_LIGHTNING_CHUNDUNG_A:'Shock Lion Shout',
+ SKILL_CH_FIRE_GIGONGTA_C:'Poison Fire Force',
+ SKILL_CH_COLD_GIGONGTA_C:'Ice Ocean Force',
+ SKILL_CH_LIGHTNING_GIGONGTA_C:'Thunder King Force'
+};
+function skillLabel(g){
+ return knownSkillNames[g] || g.replace(/^SKILL_CH_/,'').replaceAll('_',' ').replace(/\b([A-Z])\b/g,'$1');
+}
+
 function masterFor(k){return Number($('mastery-'+({physicalSkill:'physical',imbue:'imbue',nuke:'nuke'}[k])).value);}
 function listFor(k){
  const family=k==='physicalSkill'?({sword:'SWORD',spear:'SPEAR',bow:'BOW'}[$('weapon').value]):null;
@@ -24,7 +36,7 @@ function refreshSkillSelectors(){
  for(const k of Object.keys(kindFor)){
   const select=$(k+'-group'),previous=select.value;
   const choices=listFor(k);
-  select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,x.group.replace(/^SKILL_CH_/,'').replace(/_/g,' '))));
+  select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,skillLabel(x.group))));
   if(choices.some(c=>c.group===previous))select.value=previous;
   const lvl=$(k+'-skillLevel'),old=lvl.value;
   lvl.replaceChildren(option('','Auto: highest available'));
@@ -35,10 +47,17 @@ function refreshSkillSelectors(){
    if(list.some(rec=>String(rec[1])===old))lvl.value=old;
   }
   const row=selectedSkill(k);
+  const autoNote=$(k+'-auto-note');
+  $(k+'-fields').hidden=Boolean(row);
+  lvl.parentElement.hidden=!group;
+  autoNote.hidden=!row;
   if(row){
    $(k+'-min').value=String(row.powerMin);
    $(k+'-max').value=String(row.powerMax);
    $(k+'-rate').value=String(row.primaryDamagePercent);
+   autoNote.textContent='Lv '+row.skillLevel+' · AP '+row.powerMin+'–'+row.powerMax+
+     ' · Damage '+row.primaryDamagePercent+'%'+
+     (k==='nuke'?' · Secondary '+row.secondaryPercent+'%':'');
   }
  }
 }
@@ -135,11 +154,17 @@ function read(){
  s.weapon.basicPercent=({sword:60,spear:117,bow:84})[s.weapon.key];
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
-   s[k].enabled=$(k+'-enabled').checked;
    for(const f of ['min','max','rate'])s[k][f]=val(k+'-'+f);
+   // A selected database skill is active automatically. For manual mode
+   // all three entered fields activate the skill; incomplete data does not.
+   s[k].enabled=['min','max','rate'].every(f=>s[k][f]!==null);
  }
  s.imbue.rate=val('imbueRate');
- for(const k of Object.keys(kindFor)){const chosen=selectedSkill(k);if(chosen){s[k].enabled=true;s[k].min=chosen.powerMin;s[k].max=chosen.powerMax;s[k].rate=chosen.primaryDamagePercent;if(k==='nuke')s.nuke.secondaryPercent=chosen.secondaryPercent;}}
+ for(const k of Object.keys(kindFor)){const chosen=selectedSkill(k);if(chosen){
+  s[k].enabled=true;s[k].min=chosen.powerMin;s[k].max=chosen.powerMax;
+  s[k].rate=chosen.primaryDamagePercent;
+  if(k==='nuke')s.nuke.secondaryPercent=chosen.secondaryPercent;
+ }}
  s.target.level=val('targetLevel');
  for(const f of ['physicalDefense','magicalDefense','physicalAbsorption','magicalAbsorption'])s.target[f]=val(f);
  s.damageBonuses.physical=val('physicalBonus');s.damageBonuses.magical=val('magicalBonus');

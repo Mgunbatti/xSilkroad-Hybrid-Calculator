@@ -270,7 +270,7 @@ function column(title,result,selected=false){
 }
 
 const weaponNames={sword:'Bicheon',spear:'Heuksal',bow:'Pacheon'};
-let timer,previousWeapon='sword',previousUsable=usable(),previousLevel=Number($('level').value);
+let timer,previousWeapon='bow',previousUsable=usable(),previousLevel=Number($('level').value);
 function rawStats(s){
  H.verify(s);
  renderQuick({stats:H.stats(s)});
@@ -356,7 +356,7 @@ $('reset').addEventListener('click',()=>{
   const el=$(id);
   if(el.type==='checkbox')el.checked=value;else el.value=value;
  }
- previousWeapon='sword';
+ previousWeapon='bow';
  previousUsable=usable();previousLevel=Number($('level').value);
  applyStarterSkills=true;
  syncPoints();switchSkillProfile();

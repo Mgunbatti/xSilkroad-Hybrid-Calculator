@@ -40,6 +40,11 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.match(await page.locator('#quick-results').innerText(),/Normal \+ Imbue/);
   assert.equal(await page.locator('#error').isVisible(),false);
   assert.equal(await page.locator('#quick-results .damage').count(),6);
+  assert.deepEqual(await page.locator('#quick-results .damage>span:not(.mini-icon)').allTextContents(),
+   ['Normal Attack','Normal + Imbue','Physical Skill','Physical Skill + Imbue','Nuke','Nuke + Imbue']);
+  assert.ok((await page.locator('#quick-results .damage strong').allTextContents()).every(x=>x.trim()!=='—'));
+  assert.equal(await page.locator('#physicalSkill-group').inputValue(),'SKILL_CH_BOW_POWER_D');
+  assert.equal(await page.locator('#imbue-group').inputValue(),'SKILL_CH_FIRE_GIGONGTA_E');
   // Visible character inputs appear in natural user order, not buried in Advanced.
   assert.equal(await page.locator('#bonusSTR').count(),1);
   assert.equal(await page.locator('#bonusINT').count(),1);

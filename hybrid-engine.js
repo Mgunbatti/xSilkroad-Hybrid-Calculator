@@ -69,8 +69,8 @@
     finite(s.devilRate, 'Devil HP/MP rate', 0, 1000000);
     finite(s.attackRate, 'Attack rate');
     const w = s.weapon;
-    if (w.key !== 'custom' && !(w.key in Damage.basicSkills))
-      throw new Error('Unverified basic weapon: use manual rate / custom.');
+    if (w.key !== 'custom' && w.key !== 'blade' && !(w.key in Damage.basicSkills))
+      throw new Error('Unsupported weapon choice.');
     for (const key of [
       'physicalMin', 'physicalMax', 'magicalMin', 'magicalMax',
       'physicalReinforceMin', 'physicalReinforceMax',
@@ -80,7 +80,9 @@
       w.physicalReinforceMin > w.physicalReinforceMax ||
       w.magicalReinforceMin > w.magicalReinforceMax)
       throw new Error('Minimum weapon value cannot exceed maximum.');
-    if (w.key === 'custom') finite(w.basicPercent, 'Manual basic descriptor');
+    if (w.key === 'custom' || w.key === 'blade') {
+      finite(w.basicPercent, 'Manual basic descriptor', Number.MIN_VALUE);
+    }
     for (const key of ['physicalSkill', 'imbue', 'nuke']) {
       const skill = s[key];
       if (typeof skill.enabled !== 'boolean') throw new Error(key + ' enabled must be boolean.');
@@ -144,8 +146,8 @@
     d.attackRate = s.attackRate;
     d.parry = s.target.parry;
     d.targetLevel = s.target.level;
-    d.weapon = s.weapon.key;
-    d.basicPercent = s.weapon.key === 'custom' ? s.weapon.basicPercent : 100;
+    d.weapon = s.weapon.key === 'blade' ? 'custom' : s.weapon.key;
+    d.basicPercent = ['custom', 'blade'].includes(s.weapon.key) ? s.weapon.basicPercent : 100;
 
     Object.assign(d.physical, {
       enabled: true, apMode: 'displayed', min: ap.physical[0], max: ap.physical[1],

@@ -122,3 +122,41 @@ test('invalid data fails, disabled incomplete inputs and zero valid endpoints re
  s.physicalSkill.enabled=false;s.weapon.physicalMin=9999;assert.throws(()=>H.calculate(s),/Minimum weapon/);
  s.weapon.physicalMin=0;s.weapon.physicalMax=0;assert.equal(H.calculate(s).normal.normal.max,1);
 });
+
+test('Chinese skill catalogue resolves families by learned mastery without leaking thousands of levels into UI',()=>{
+ const C=require('../skill-catalog.js'),catalog=require('../data/chinese-skills.json');
+ const nukes=C.groups(catalog,'nuke',null,255);
+ assert.equal(nukes.length,17);
+ const fire=C.groups(catalog,'nuke','FIRE',52);
+ const flame=C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',52);
+ assert.equal(flame.id,1459);
+ assert.deepEqual([flame.skillLevel,flame.primaryDamagePercent,flame.powerMin,flame.powerMax,flame.secondaryPercent],[12,250,304,506,83]);
+ assert.equal(C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',51).skillLevel,11);
+ assert.equal(C.select(catalog,'SKILL_CH_FIRE_GIGONGSUL_A',52,13),null);
+ assert.ok(fire.length>0);
+ const spear=C.groups(catalog,'physical','SPEAR',52);
+ assert.ok(spear.length>0);
+ for(const selected of spear)assert.ok(selected.max.requiredMasteryLevel<=52);
+});
+test('nuke plus imbue must have secondary descriptor rate and preserve original pure nuke',()=>{
+ const s=fixture();
+ const before=H.calculate(s);
+ assert.equal(before.nukeImbue,null);
+ s.nuke.secondaryPercent=83;
+ const result=H.calculate(s);
+ assert.deepEqual(result.nuke,before.nuke);
+ assert.ok(result.nukeImbue.normal.max>result.nuke.normal.max);
+ assert.deepEqual(result.nukeImbue.normal,result.nukeImbue.critical);
+ const d=core(s);
+ d.physical.enabled=false;
+ d.attackMode='active';
+ Object.assign(d.magical,{enabled:true,skillMin:123,skillMax:205,skillPercent:250,mastery:40});
+ const pure=D.channel(d,'magical',100);
+ const sec=core(s);
+ sec.physical.enabled=false;sec.attackMode='active';
+ Object.assign(sec.magical,{enabled:true,skillMin:187,skillMax:312,skillPercent:100,mastery:H.secondaryMastery(40,52)});
+ const expected=pure+Math.trunc(D.channel(sec,'magical',100)*83/100);
+ assert.equal(result.nukeImbue.normal.max,expected);
+ s.nuke.secondaryPercent=0;
+ assert.deepEqual(H.calculate(s).nukeImbue.normal,H.calculate(s).nuke.normal);
+});

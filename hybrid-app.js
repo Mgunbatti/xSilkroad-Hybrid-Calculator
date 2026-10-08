@@ -56,8 +56,7 @@ function refreshSkillSelectors(){
    $(k+'-max').value=String(row.powerMax);
    $(k+'-rate').value=String(row.primaryDamagePercent);
    autoNote.textContent='Lv '+row.skillLevel+' · AP '+row.powerMin+'–'+row.powerMax+
-     ' · Damage '+row.primaryDamagePercent+'%'+
-     (k==='nuke'?' · Secondary '+row.secondaryPercent+'%':'');
+     ' · Damage '+row.primaryDamagePercent+'%';
   }
  }
 }
@@ -104,11 +103,13 @@ function field(parent,id,label,value,min=0,step='any'){
   wrap.append(lab,input);parent.append(wrap);
 }
 for (const [key,label] of [
- ['physicalMin','Physical weapon AP min'],['physicalMax','Physical weapon AP max'],
- ['magicalMin','Magical weapon AP min'],['magicalMax','Magical weapon AP max'],
+ ['physicalMin','Physical AP min'],['physicalMax','Physical AP max'],
+ ['magicalMin','Magical AP min'],['magicalMax','Magical AP max']
+]) field($('weapon-fields'),key,label,defaults.weapon[key]);
+for (const [key,label] of [
  ['physicalReinforceMin','Physical reinforce min %'],['physicalReinforceMax','Physical reinforce max %'],
  ['magicalReinforceMin','Magical reinforce min %'],['magicalReinforceMax','Magical reinforce max %']
-]) field($('weapon-fields'),key,label,defaults.weapon[key]);
+]) field($('reinforcement-fields'),key,label,defaults.weapon[key]);
 for (const [key,label] of [['physicalSkill','Physical skill'],['imbue','Imbue'],['nuke','Nuke']]) {
  const x=defaults[key];
  for(const [fieldName,caption] of [['min','Skill AP min'],['max','Skill AP max'],['rate','Damage rate %']])
@@ -120,9 +121,9 @@ for(const [key,label,value] of [
  ['physicalAbsorption','Physical absorption %',1],['magicalAbsorption','Magical absorption %',1],
  ['physicalBonus','Physical damage bonus %',0],['magicalBonus','Magical damage bonus %',0]
 ]) field($('target-fields'),key,label,value,key==='targetLevel'||key==='parry'?1:0,key==='targetLevel'?'1':'any');
-for(const [key,label] of [['physical','Weapon mastery level'],['imbue','Imbue element mastery level'],['nuke','Nuke element mastery level']]) field($('mastery-fields'),'mastery-'+key,label,0,0,'1');
-for(const [id,label,value] of [['normalSecondary','Normal descriptor secondary %',null],['skillSecondary','Physical skill descriptor secondary %',null],['imbueRate','Imbue descriptor rate %',100]]) field($('secondary-fields'),id,label,value,0,'1');
-$('imbue-rate').parentElement.hidden=true;
+for(const [key,label] of [
+ ['physical','Weapon mastery level'],['imbue','Imbue element mastery level'],['nuke','Magical skill mastery level']
+]) field($('mastery-fields'),'mastery-'+key,label,Number($('level').value),0,'1');
 const ids=[...document.querySelectorAll('#hybrid-form input, #hybrid-form select')].map(e=>e.id);
 const initialValues=Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]));
 function usable(){
@@ -150,7 +151,8 @@ function read(){
  for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate'])s[k]=val(k);
  s.weapon.key=$('weapon').value;s.weapon.apMode=$('apMode').value;
  for(const k of ['physical','imbue','nuke'])s.masteries[k]=val('mastery-'+k);
- s.imbue.mode=$('imbueMode').value;s.weapon.secondaryPercent=val('normalSecondary');s.physicalSkill.secondaryPercent=val('skillSecondary');
+ // Keep recovered math inside the engine; no player-facing calculator mode.
+ s.imbue.mode='attack';
  s.weapon.basicPercent=({sword:60,spear:117,bow:84})[s.weapon.key];
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
@@ -159,7 +161,7 @@ function read(){
    // all three entered fields activate the skill; incomplete data does not.
    s[k].enabled=['min','max','rate'].every(f=>s[k][f]!==null);
  }
- s.imbue.rate=val('imbueRate');
+
  for(const k of Object.keys(kindFor)){const chosen=selectedSkill(k);if(chosen){
   s[k].enabled=true;s[k].min=chosen.powerMin;s[k].max=chosen.powerMax;
   s[k].rate=chosen.primaryDamagePercent;
@@ -227,14 +229,14 @@ function rawStats(s){
 }
 function refreshWeapon(){
  const key=$('weapon').value;
- $('setup-label').textContent=weaponNames[key]+' · Target Lv'+$('targetLevel').value;
+ $('setup-label').textContent=weaponNames[key]+' · '+(Number($('targetLevel').value)===1?'Manyang Lv1':'Target Lv'+$('targetLevel').value);
 }
 function update(){
  clearTimeout(timer);syncPoints();refreshWeapon();refreshSkillSelectors();
- $('secondary-fields').hidden=$('imbueMode').value!=='secondary';
  for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
- for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+($('apMode').value==='displayed'?' character AP ':' weapon AP ')+(k.endsWith('Min')?'min':'max');
- for(const key of ['physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])$(key).parentElement.hidden=$('apMode').value==='displayed';
+ $('character-ap-heading').textContent=$('apMode').value==='displayed'?'Character Attack Power':'Weapon Attack Power';
+ for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+' AP '+(k.endsWith('Min')?'min':'max');
+ $('reinforcement-fields').hidden=$('apMode').value==='displayed';
  try {
   const s=read(),results=H.compare(s);
   renderQuick(results.selected);
@@ -264,8 +266,15 @@ $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{
  if(e.target.id==='level'||e.target.id==='unspentPoints'){
   if(e.target.id==='level'){
+   const currentLevel=Number(e.target.value);
    if(Number($('maxLevelReached').value)===previousLevel)$('maxLevelReached').value=e.target.value;
-   previousLevel=Number(e.target.value);
+   // Default: every mastery follows character level. A deliberately
+   // lowered mastery stays lowered, except that it can never exceed level.
+   for(const k of ['physical','imbue','nuke']){
+    const control=$('mastery-'+k),mastery=Number(control.value);
+    if(mastery===previousLevel||mastery>currentLevel)control.value=e.target.value;
+   }
+   previousLevel=currentLevel;
   }
   syncPoints(true);
  }

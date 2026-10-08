@@ -235,6 +235,7 @@ function update(){
  clearTimeout(timer);syncPoints();refreshWeapon();refreshSkillSelectors();
  for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
  $('character-ap-heading').textContent=$('apMode').value==='displayed'?'Character Attack Power':'Weapon Attack Power';
+ $('ap-source-note').textContent=$('apMode').value==='displayed'?'(C screen)':'(tooltip)';
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+' AP '+(k.endsWith('Min')?'min':'max');
  $('reinforcement-fields').hidden=$('apMode').value==='displayed';
  try {

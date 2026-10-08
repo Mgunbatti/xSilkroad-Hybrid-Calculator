@@ -53,7 +53,7 @@ function read(){
  s.unspentPoints=val('unspentPoints');s.allocatedSTR=val('strPoints');
  for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate','attackRate'])s[k]=val(k);
  s.weapon.key=$('weapon').value;
- s.weapon.basicPercent=val('basicPercent');
+ s.weapon.basicPercent=['blade','custom'].includes(s.weapon.key)?val('basicPercent'):100;
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
    s[k].enabled=$(k+'-enabled').checked;

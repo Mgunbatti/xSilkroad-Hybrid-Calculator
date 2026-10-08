@@ -271,6 +271,13 @@ $('hybrid-form').addEventListener('input',e=>{
  }
  if(e.target.id==='weapon' && $('weapon').value!==previousWeapon)selectWeapon($('weapon').value);
  if(e.target.id==='skillProfile'){switchSkillProfile();return;}
+ for(const k of Object.keys(kindFor)){
+  if(e.target.id===k+'-group' && !$(k+'-group').value){
+   // Selecting Manual values is an explicit reset, not an instruction
+   // to keep the hidden, previously database-filled AP and percentage.
+   for(const field of ['min','max','rate'])$(k+'-'+field).value='';
+  }
+ }
  clearTimeout(timer);timer=setTimeout(update,90);
 });
 $('weapon').addEventListener('change',()=>{

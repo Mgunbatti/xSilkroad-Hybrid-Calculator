@@ -79,6 +79,31 @@ function damageRange(r,crit=false){
  const d=crit?r.critical:r.normal;
  return fmt(d.min)+' – '+fmt(d.max);
 }
+function quickCard(label, value, note=''){
+ const c=document.createElement('div');c.className='quick-card';
+ const heading=document.createElement('span');heading.textContent=label;
+ const number=document.createElement('strong');number.textContent=value;
+ c.append(heading,number);
+ if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
+ return c;
+}
+function renderQuick(result){
+ const s=result.stats;
+ const cards=[
+  quickCard('STR / INT',fmt(s.STR)+' / '+fmt(s.INT)),
+  quickCard('Maximum HP',fmt(s.HP)),
+  quickCard('Maximum MP',fmt(s.MP)),
+  quickCard('Physical Balance',fmt(s.physicalBalance)+'%'),
+  quickCard('Magical Balance',fmt(s.magicalBalance)+'%'),
+  quickCard('Physical Attack',damageRange(result.physical)),
+  quickCard('Physical Critical',damageRange(result.physical,true)),
+  quickCard('Physical + Imbue',damageRange(result.physicalImbue),'Demo magical contribution; imbue caller not verified'),
+  quickCard('Physical + Imbue Critical',damageRange(result.physicalImbue,true)),
+  quickCard('Magical Nuke',damageRange(result.nuke),'Lv1 demo; editable'),
+  quickCard('Nuke Critical','Not applicable','Pure magical nuke has no physical crit stage')
+ ];
+ $('quick-results').replaceChildren(...cards);
+}
 function column(title,result,selected=false){
  const c=document.createElement('div');c.className='build-col'+(selected?' selected':'');
  const h=document.createElement('h3');h.textContent=title;c.append(h);
@@ -105,13 +130,14 @@ function update(){
  $('manual-rate-wrap').hidden=$('weapon').value!=='custom';
  try{
   const s=read(),results=H.compare(s);
+  renderQuick(results.selected);
   $('comparison').replaceChildren(
    column('Full STR',results.fullSTR),
    column('Your Build',results.selected,true),
    column('Full INT',results.fullINT)
   );
   $('error').hidden=true;
- }catch(e){$('error').hidden=false;$('error').textContent=e.message;$('comparison').replaceChildren();}
+ }catch(e){$('error').hidden=false;$('error').textContent=e.message;$('comparison').replaceChildren();$('quick-results').replaceChildren();}
 }
 $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{

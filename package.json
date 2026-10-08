@@ -2,9 +2,10 @@
   "name": "silkroad-damage-simulator",
   "private": true,
   "scripts": {
-    "test": "node --test tests/engine.test.cjs tests/live-game.cjs",
+    "test": "node --test tests/*.cjs",
     "test:live": "node --test tests/live-game.cjs",
-    "build": "node --check engine.js && node --check app.js"
+    "build": "node --check engine.js && node --check hybrid-engine.js && node --check hybrid-app.js",
+    "test:hybrid": "node --test tests/hybrid.test.cjs"
   },
   "version": "1.0.0"
 }

@@ -33,7 +33,7 @@ test('level 1 defaults, devil multiplies both HP and MP without changing balance
  assert.equal(normal.stats.magicalBalance,devil.stats.magicalBalance);
 });
 test('custom Devil rate supports high and fractional server percentages on HP and MP',()=>{
- const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;
+ const s=H.defaults();s.level=1;s.maxLevelReached=1;s.allocatedSTR=0;s.unspentPoints=0;s.bonusSTR=0;s.bonusINT=0;
  const zero=H.calculate(s);
  s.devilRate=250;const high=H.calculate(s);
  assert.equal(high.stats.HP,700);
@@ -90,7 +90,7 @@ test('normal physical uses verified default skill descriptor not active skill ra
  assert.notDeepEqual(y.physical.normal,x.physical.normal);
 });
 test('optional nuke and imbue results exist only when enabled',()=>{
- const s=H.defaults();
+ const s=H.defaults();s.nuke.enabled=false;s.imbue.enabled=false;
  assert.equal(H.calculate(s).nuke,null);
  assert.equal(H.calculate(s).physicalImbue,null);
  s.nuke.enabled=true;s.nuke.min=200;s.nuke.max=300;s.nuke.rate=280;

@@ -15,6 +15,9 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#physicalMin').inputValue(),'');
   assert.equal(await page.locator('#error').isVisible(),false);
   assert.equal(await page.locator('#quick-results .damage').count(),5);
+  // Magical-only nuke cards never have a physical critical component.
+  assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke + Imbue'}).locator('small').count(),0);
+  assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke'}).locator('small').count(),0);
   assert.equal(await page.locator('body').innerText().then(s=>/Mastery %|Attack rate \(distribution\)|Target parry|Copper Sword|Normal attack multiplier/.test(s)),false);
   await page.locator('#level').fill('52');
   await page.locator('[data-ratio="1"]').click();
@@ -26,6 +29,10 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#error').isVisible(),false);
   const results=await page.locator('#quick-results').innerText();
   assert.match(results,/2,782/);assert.match(results,/4,952/);assert.match(results,/7,734/);
+  assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke + Imbue'}).locator('small').count(),0);
+  assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke'}).locator('small').count(),0);
+  const compareText=await page.locator('#comparison').innerText();
+  assert.doesNotMatch(compareText,/Nuke(?: \+ Imbue)? critical/i);
   const values=await page.locator('#hybrid-form input').evaluateAll(es=>es.map(e=>[e.id,e.value,e.checked]));
   for(const weapon of ['bow','sword','spear'])await page.locator('#weapon').selectOption(weapon);
   assert.deepEqual(await page.locator('#hybrid-form input').evaluateAll(es=>es.map(e=>[e.id,e.value,e.checked])),values);

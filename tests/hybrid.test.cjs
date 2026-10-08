@@ -101,7 +101,7 @@ test('optional nuke and imbue results exist only when enabled',()=>{
 });
 test('prevents invalid or unverified build weapon descriptors',()=>{
  const s=H.defaults();s.weapon.key='blade';
- assert.throws(()=>H.calculate(s),/Unverified/);
+ assert.throws(()=>H.calculate(s),/Manual basic descriptor/);
  s.weapon.basicPercent=90;assert.doesNotThrow(()=>H.calculate(s));
  s.weapon.key='custom';assert.doesNotThrow(()=>H.calculate(s));
  s.allocatedSTR=999999;assert.throws(()=>H.calculate(s),/Allocated STR/);

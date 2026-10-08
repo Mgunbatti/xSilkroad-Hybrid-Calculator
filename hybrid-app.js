@@ -167,11 +167,12 @@ function quickCard(label, value, note='',icon='activity',kind='stat'){
  return c;
 }
 const damageOutputs=[['normal','Normal Attack'],['physicalSkill','Physical Skill'],['nuke','Nuke'],['nukeImbue','Nuke + Imbue'],['normalImbue','Normal + Imbue'],['physicalSkillImbue','Physical Skill + Imbue']];
+const hasPhysicalCritical=key=>!['nuke','nukeImbue'].includes(key);
 function renderQuick(result){
  const st=result.stats;
  const cards=[quickCard('HP',fmt(st.HP)),quickCard('MP',fmt(st.MP)),quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),quickCard('Magical Balance',fmt(st.magicalBalance)+'%')];
  for(const [key,label] of damageOutputs){
-  cards.push(quickCard(label,damageRange(result[key]),key==='nuke'?'':('Critical: '+damageRange(result[key],true)),'activity','damage'));
+  cards.push(quickCard(label,damageRange(result[key]),hasPhysicalCritical(key)?('Critical: '+damageRange(result[key],true)):'','activity','damage'));
  }
  $('quick-results').replaceChildren(...cards);
 }
@@ -188,7 +189,7 @@ function column(title,result,selected=false){
  c.append(row('Magical AP'+($('apMode').value==='tooltip'?' (estimated)':''),ap?ap.magical.map(fmt).join(' – '):'—'));
  for(const [key,label] of damageOutputs){
   c.append(row(label,damageRange(result[key])));
-  if(key!=='nuke')c.append(row(label+' critical',damageRange(result[key],true)));
+  if(hasPhysicalCritical(key))c.append(row(label+' critical',damageRange(result[key],true)));
  }
  return c;
 }

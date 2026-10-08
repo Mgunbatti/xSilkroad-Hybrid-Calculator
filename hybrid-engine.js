@@ -41,7 +41,7 @@
     devilRate: 0,
     attackRate: 100,            // distribution only; extrema do not depend on it
     weapon: {
-      key: 'sword',
+      key: 'sword', basicPercent: 60,
       physicalMin: 88, physicalMax: 96,
       magicalMin: 150, magicalMax: 167,
       physicalReinforceMin: 43.4, physicalReinforceMax: 49.3,
@@ -69,7 +69,7 @@
     finite(s.devilRate, 'Devil HP/MP rate', 0, 1000000);
     finite(s.attackRate, 'Attack rate');
     const w = s.weapon;
-    if (w.key !== 'custom' && w.key !== 'blade' && !(w.key in Damage.basicSkills))
+    if (w.key !== 'custom' && !(w.key in Damage.basicSkills))
       throw new Error('Unsupported weapon choice.');
     for (const key of [
       'physicalMin', 'physicalMax', 'magicalMin', 'magicalMax',
@@ -80,9 +80,7 @@
       w.physicalReinforceMin > w.physicalReinforceMax ||
       w.magicalReinforceMin > w.magicalReinforceMax)
       throw new Error('Minimum weapon value cannot exceed maximum.');
-    if (w.key === 'custom' || w.key === 'blade') {
-      finite(w.basicPercent, 'Manual basic descriptor', Number.MIN_VALUE);
-    }
+    finite(w.basicPercent, 'Basic attack damage rate', Number.MIN_VALUE);
     for (const key of ['physicalSkill', 'imbue', 'nuke']) {
       const skill = s[key];
       if (typeof skill.enabled !== 'boolean') throw new Error(key + ' enabled must be boolean.');
@@ -146,8 +144,9 @@
     d.attackRate = s.attackRate;
     d.parry = s.target.parry;
     d.targetLevel = s.target.level;
-    d.weapon = s.weapon.key === 'blade' ? 'custom' : s.weapon.key;
-    d.basicPercent = ['custom', 'blade'].includes(s.weapon.key) ? s.weapon.basicPercent : 100;
+    // User's server rate overrides the published DB default, not the core formula.
+    d.weapon = 'custom';
+    d.basicPercent = s.weapon.basicPercent;
 
     Object.assign(d.physical, {
       enabled: true, apMode: 'displayed', min: ap.physical[0], max: ap.physical[1],

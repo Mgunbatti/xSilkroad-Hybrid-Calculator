@@ -1166,3 +1166,6 @@ Function entry **`0x006B7880`**, RVA **`0x00237880`**, IDA label `CSkillManager_
 006B88F0  fadd    ds:flt_DAF9F8
 006B88F6  fdiv    ds:dbl_DB0B60
 ```
+## 12. Hybrid calculator mapping
+
+The recovered binary specification above is preserved. The calculator's user-facing historical attack/imbue mapping and optional secondary caller adapter are documented separately in [HYBRID_FORMULA.md](HYBRID_FORMULA.md). Live discrepancies and input provenance are in [VALIDATION.md](VALIDATION.md#hybrid-calculator-implementation-2026-10-08). These adapter notes do not establish new binary facts.

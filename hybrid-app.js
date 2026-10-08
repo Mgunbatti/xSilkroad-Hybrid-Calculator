@@ -53,7 +53,7 @@ function read(){
  s.unspentPoints=val('unspentPoints');s.allocatedSTR=val('strPoints');
  for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate','attackRate'])s[k]=val(k);
  s.weapon.key=$('weapon').value;
- s.weapon.basicPercent=['blade','custom'].includes(s.weapon.key)?val('basicPercent'):100;
+ s.weapon.basicPercent=val('basicPercent');
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
    s[k].enabled=$(k+'-enabled').checked;
@@ -77,28 +77,27 @@ function damageRange(r,crit=false){
  const d=crit?r.critical:r.normal;
  return fmt(d.min)+' – '+fmt(d.max);
 }
-function quickCard(label, value, note=''){
- const c=document.createElement('div');c.className='quick-card';
+function quickCard(label, value, note='',icon='activity',kind='stat'){
+ const c=document.createElement('div');c.className='quick-card '+kind;
  const heading=document.createElement('span');heading.textContent=label;
  const number=document.createElement('strong');number.textContent=value;
- c.append(heading,number);
+ const glyph=document.createElement('span');glyph.className='mini-icon';glyph.setAttribute('aria-hidden','true');glyph.textContent=({heart:'♡',droplet:'♧',swords:'⚔',flame:'♨',sword:'⚔',target:'◎',spark:'✦',activity:'◈'})[icon]||'◈';c.append(glyph,heading,number);
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
-function renderQuick(result, status='') {
- const s=result.stats;
+function renderQuick(result){
+ const st=result.stats;
  const cards=[
-  quickCard('STR / INT',fmt(s.STR)+' / '+fmt(s.INT)),
-  quickCard('Maximum HP',fmt(s.HP)),
-  quickCard('Maximum MP',fmt(s.MP)),
-  quickCard('Physical Balance',fmt(s.physicalBalance)+'%'),
-  quickCard('Magical Balance',fmt(s.magicalBalance)+'%'),
-  quickCard('Physical Attack',damageRange(result.physical)),
-  quickCard('Physical Critical',damageRange(result.physical,true)),
-  quickCard('Physical + Imbue',damageRange(result.physicalImbue),'Demo magical contribution; imbue caller not verified'),
-  quickCard('Physical + Imbue Critical',damageRange(result.physicalImbue,true)),
-  quickCard('Magical Nuke',damageRange(result.nuke),'Lv1 demo; editable')
+ quickCard('HP',fmt(st.HP),'Maximum HP','heart','stat'),
+ quickCard('MP',fmt(st.MP),'Maximum MP','droplet','stat'),
+ quickCard('Physical Balance',fmt(st.physicalBalance)+'%','','swords','stat'),
+ quickCard('Magical Balance',fmt(st.magicalBalance)+'%','','flame','stat'),
+ quickCard('Physical Damage',damageRange(result.physical),'Normal hit','sword','damage'),
+ quickCard('Critical Physical',damageRange(result.physical,true),'Physical crit only','target','damage'),
+ quickCard('Nuke Damage',damageRange(result.nuke),'Magical skill · no crit','spark','damage')
  ];
+ if(result.physicalImbue) cards.push(quickCard('Physical + Imbue',damageRange(result.physicalImbue),'Secondary imbue estimate','flame','optional'));
+ if(result.physicalImbue) cards.push(quickCard('Imbue + Physical Crit',damageRange(result.physicalImbue,true),'Physical component critical','swords','optional'));
  $('quick-results').replaceChildren(...cards);
 }
 function column(title,result,selected=false){
@@ -131,7 +130,7 @@ let timer,previousWeapon='sword',previousUsable=usable(),previousLevel=Number($(
 function rawStats(s){
  const st=H.stats(s);
  $('quick-results').replaceChildren(
-  quickCard('STR / INT',fmt(st.STR)+' / '+fmt(st.INT)),
+  quickCard('STR / INT',fmt(st.STR)+' / '+fmt(st.INT),'','activity','stat'),
   quickCard('Maximum HP',fmt(st.HP)),
   quickCard('Maximum MP',fmt(st.MP)),
   quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),
@@ -144,13 +143,11 @@ function rawStats(s){
 }
 function refreshWeapon(){
  const key=$('weapon').value;
- const provisional=key==='blade'||key==='custom';
- $('manual-rate-wrap').hidden=!provisional;
+ const provisional=key==='custom';
+ $('manual-rate-wrap').hidden=false;
  $('setup-label').textContent=weaponNames[key]+(key==='sword'?' (+7 demo)':'')+' · Manyang Lv1';
  if(provisional) {
-  $('weapon-warning').textContent=key==='blade'
-    ? 'Blade default attack % has not been verified. Enter your server percentage and Blade tooltip values.'
-    : 'Enter your weapon basic attack % and tooltip values.';
+  $('weapon-warning').textContent='Enter your weapon tooltip and basic attack percentage.';
  } else if(key!=='sword'){
   $('weapon-warning').textContent='Enter '+weaponNames[key]+' tooltip values. Copper Sword values are not reused.';
  }else{
@@ -197,7 +194,7 @@ function clearWeaponDemo(key){
     $(f).value='';
   $('bonusSTR').value='0';$('bonusINT').value='0';
  }
- $('basicPercent').value='';
+ $('basicPercent').value=String(({sword:60,blade:60,spear:117,glaive:117,bow:84})[key]??'');
  previousWeapon=key;
  refreshWeapon();
 }
@@ -231,6 +228,6 @@ $('reset').addEventListener('click',()=>{
  }
  previousWeapon='sword';
  previousUsable=usable();previousLevel=Number($('level').value);
- syncPoints();update();
+ $('basicPercent').value='60';syncPoints();update();
 });
 syncPoints();update();

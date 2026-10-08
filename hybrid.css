@@ -118,3 +118,18 @@ button:focus-visible,summary:focus-visible{outline:2px solid #58a6ff}
 @media(max-width:760px){.custom-grid{grid-template-columns:1fr}}
 
 .quick-card.damage{grid-column:span 3}.quick-card .mini-icon{display:none}.quick-card{display:block}.quick-card strong{display:block}.build-col{background:#0d1117}@media(max-width:440px){.quick-card.damage{grid-column:span 2}}
+
+/* Compact settings: no redundant include toggles or exposed database percentages. */
+.skill-auto-note{margin:10px 0 3px;color:#8b949e;font-size:12px;line-height:1.5}
+.config-section .fields[hidden],.config-section .field[hidden],.skill-auto-note[hidden]{display:none!important}
+.config-stack{gap:12px}
+.config-stack>.config-section{padding:14px}
+.config-stack .config-section h3{margin-bottom:12px}
+.config-section .field{margin-bottom:8px}
+.custom-grid{gap:14px}
+.hero{padding:15px 0 12px}
+.hero h1{margin:5px 0}
+.hero p{margin:5px 0}
+.quick-card{min-height:76px;padding:12px 14px}
+.quick-results{gap:10px;margin-top:12px}
+@media(max-width:480px){.quick-card{min-height:70px;padding:12px}}

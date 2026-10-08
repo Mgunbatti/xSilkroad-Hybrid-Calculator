@@ -60,8 +60,7 @@ function refreshSkillSelectors(){
    $(k+'-min').value=String(row.powerMin);
    $(k+'-max').value=String(row.powerMax);
    $(k+'-rate').value=String(row.primaryDamagePercent);
-   autoNote.textContent='Lv '+row.skillLevel+' · AP '+row.powerMin+'–'+row.powerMax+
-     ' · Damage '+row.primaryDamagePercent+'%';
+   autoNote.textContent='Lv '+row.skillLevel+' · Values loaded automatically';
   }
  }
 }

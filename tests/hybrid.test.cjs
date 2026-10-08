@@ -13,7 +13,7 @@ test('level 1 defaults, devil multiplies both HP and MP without changing balance
 });
 test('original Lv8 +5 STR and +5 INT produce observed 57 HP and 57 MP increments',()=>{
  const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=91;s.bonusINT=91;
+ s.bonusSTR=84;s.bonusINT=84;
  const before=H.stats(s);assert.equal(before.STR,111);assert.equal(before.INT,111);
  s.bonusSTR+=5;const afterSTR=H.stats(s);
  assert.equal(afterSTR.baseHP-before.baseHP,57);
@@ -24,10 +24,10 @@ test('original Lv8 +5 STR and +5 INT produce observed 57 HP and 57 MP increments
 });
 test('magical AP tooltip reinforcement matches Lv8 111/116 INT screenshots',()=>{
  const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=91;s.bonusINT=91;
+ s.bonusSTR=84;s.bonusINT=84;
  const before=H.attackPower(s,H.stats(s));
  assert.deepEqual(before.magical,[232,262]);
- s.bonusINT=96;const after=H.attackPower(s,H.stats(s));
+ s.bonusINT=89;const after=H.attackPower(s,H.stats(s));
  assert.deepEqual(after.magical,[236,267]);
 });
 test('build comparisons preserve weapon and only move stat points',()=>{
@@ -42,7 +42,7 @@ test('build comparisons preserve weapon and only move stat points',()=>{
 });
 test('normal physical uses verified default skill descriptor not active skill rate',()=>{
  const s=H.defaults();s.level=8;s.maxLevelReached=8;s.unspentPoints=21;s.allocatedSTR=0;
- s.bonusSTR=91;s.bonusINT=91;s.weapon.key='sword';
+ s.bonusSTR=84;s.bonusINT=84;s.weapon.key='sword';
  const x=H.calculate(s);
  const d=D.defaults();d.attackMode='basic';d.weapon='sword';
  assert.equal(D.descriptorPercent(d,'physical'),60);

@@ -29,9 +29,10 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#secondary-fields').count(),0);
   const inputsInOrder=await page.evaluate(()=>{
    const ids=['strPoints','bonusSTR','bonusINT','physicalMin','physicalMax','magicalMin','magicalMax'];
-   return ids.map(id=>document.getElementById(id).compareDocumentPosition(document.getElementById('strPoints')));
+   const fields=ids.map(id=>document.getElementById(id));
+   return fields.every((el,i)=>i===0||Boolean(fields[i-1].compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING));
   });
-  assert.equal(inputsInOrder.length,7);
+  assert.equal(inputsInOrder,true);
 
   // Magical-only nuke cards never have a physical critical component.
   assert.equal(await page.locator('#quick-results .damage').filter({hasText:'Nuke + Imbue'}).locator('small').count(),0);

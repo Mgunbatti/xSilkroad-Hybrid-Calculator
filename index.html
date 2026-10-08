@@ -7,10 +7,10 @@
   <meta name="description" content="Compare Silkroad Chinese STR and INT builds, HP, MP, physical, critical and magical damage.">
   <title>xSilkroad Hybrid Calculator</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="hybrid.css?v=20261008-5">
+  <link rel="stylesheet" href="hybrid.css?v=20261008-6">
   <script defer src="engine.js?v=20261008-5"></script>
   <script defer src="hybrid-engine.js?v=20261008-5"></script>
-  <script defer src="hybrid-app.js?v=20261008-5"></script>
+  <script defer src="hybrid-app.js?v=20261008-6"></script>
 </head>
 <body>
 <header>
@@ -68,67 +68,59 @@
     <details class="panel customization-panel" id="customize">
       <summary><span class="summary-title">Advanced Settings · Equipment / Skills / Target</span><span class="summary-note">Optional · use your server values</span></summary>
       <div class="custom-grid">
-        <section class="config-section">
-          <h3>Weapon</h3>
-          <label for="weapon">Chinese weapon &amp; mastery</label>
-          <select id="weapon">
-            <optgroup label="Bicheon">
-              <option value="sword" selected>Sword · Bicheon</option>
-              <option value="blade">Blade · Bicheon</option>
-            </optgroup>
-            <optgroup label="Heuksal">
-              <option value="spear">Spear · Heuksal</option>
-              <option value="glaive">Glaive · Heuksal</option>
-            </optgroup>
-            <optgroup label="Pacheon">
-              <option value="bow">Bow · Pacheon</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="custom">Custom weapon</option>
-            </optgroup>
-          </select>
-          <div class="field" id="manual-rate-wrap">
-            <label for="basicPercent">Basic attack damage (%) · editable server value</label>
-            <input id="basicPercent" type="number" min="0" step="any" value="">
-          </div>
-          <p id="weapon-warning" class="config-note" role="status"></p>
-          <details class="inner-details" id="weapon-details">
-            <summary>Weapon tooltip values</summary>
-            <div class="fields" id="weapon-fields"></div>
-          </details>
-        </section>
-
-        <section class="config-section">
-          <h3>Skill setup</h3>
-          <label class="toggle"><input id="physicalSkill-enabled" type="checkbox"> Use a physical skill instead of normal attack</label>
-          <div class="fields" id="physicalSkill-fields"></div>
-          <div class="inner-divider"></div>
-          <label class="toggle"><input id="imbue-enabled" type="checkbox" checked> Include Fire Imbue (demo)</label>
-          <div class="fields" id="imbue-fields"></div>
-          <div class="inner-divider"></div>
-          <label class="toggle"><input id="nuke-enabled" type="checkbox" checked> Include Fire Nuke (demo)</label>
-          <div class="fields" id="nuke-fields"></div>
-          <p class="config-note">Magical nuke does not critical. Secondary imbue caller behavior is still provisional.</p>
-        </section>
-
-        <section class="config-section">
-          <h3>Additional stats</h3>
-          <div class="fields">
-            <div class="field"><label for="bonusSTR">Equipment bonus STR</label><input id="bonusSTR" type="number" min="0" step="1" value="7"></div>
-            <div class="field"><label for="bonusINT">Equipment bonus INT</label><input id="bonusINT" type="number" min="0" step="1" value="7"></div>
-            <div class="field"><label for="extraHP">Flat HP bonus</label><input id="extraHP" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="extraMP">Flat MP bonus</label><input id="extraMP" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="unspentPoints">Unspent stat points</label><input id="unspentPoints" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="maxLevelReached">Maximum level reached</label><input id="maxLevelReached" type="number" min="1" max="255" step="1" value="100"></div>
-            <div class="field"><label for="attackRate">Attack rate (distribution)</label><input id="attackRate" type="number" min="0" value="100"></div>
-          </div>
-        </section>
-
-        <section class="config-section">
-          <h3>Monster &amp; bonuses</h3>
-          <p class="config-note">Default: Manyang Lv1, physical defense 7, magical defense 10, absorption 1% each. Parry 100 is assumed.</p>
-          <div class="fields" id="target-fields"></div>
-        </section>
+        <div class="config-stack">
+          <section class="config-section">
+            <h3>Normal Attack</h3>
+            <label for="weapon">Chinese mastery — normal attack only</label>
+            <select id="weapon">
+              <option value="sword" selected>Bicheon Normal Attack</option>
+              <option value="spear">Heuksal Normal Attack</option>
+              <option value="bow">Pacheon Normal Attack</option>
+            </select>
+            <p class="normal-attack-rate">Normal attack multiplier <strong id="basicPercentDisplay">60%</strong></p>
+            <p class="config-note">This multiplier applies only to normal attacks. It does not affect Physical Skills, Imbue skill damage or Nukes.</p>
+            <p id="weapon-warning" class="config-note" role="status"></p>
+            <details class="inner-details" id="weapon-details">
+              <summary>Weapon tooltip values (manual)</summary>
+              <div class="fields" id="weapon-fields"></div>
+              <p class="config-note">Weapon stats are separate from the normal attack mastery. Enter your own weapon values for accurate comparisons.</p>
+            </details>
+          </section>
+          <section class="config-section">
+            <h3>Imbue</h3>
+            <label class="toggle"><input id="imbue-enabled" type="checkbox" checked> Include Imbue (demo values)</label>
+            <div class="fields" id="imbue-fields"></div>
+          </section>
+          <section class="config-section">
+            <h3>Additional Stats</h3>
+            <div class="fields">
+              <div class="field"><label for="bonusSTR">Equipment bonus STR</label><input id="bonusSTR" type="number" min="0" step="1" value="7"></div>
+              <div class="field"><label for="bonusINT">Equipment bonus INT</label><input id="bonusINT" type="number" min="0" step="1" value="7"></div>
+              <div class="field"><label for="extraHP">Flat HP bonus</label><input id="extraHP" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="extraMP">Flat MP bonus</label><input id="extraMP" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="unspentPoints">Unspent stat points</label><input id="unspentPoints" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="maxLevelReached">Maximum level reached</label><input id="maxLevelReached" type="number" min="1" max="255" step="1" value="100"></div>
+              <div class="field"><label for="attackRate">Attack rate (distribution)</label><input id="attackRate" type="number" min="0" value="100"></div>
+            </div>
+          </section>
+        </div>
+        <div class="config-stack">
+          <section class="config-section">
+            <h3>Physical Skill</h3>
+            <label class="toggle"><input id="physicalSkill-enabled" type="checkbox"> Use Physical Skill instead of Normal Attack</label>
+            <div class="fields" id="physicalSkill-fields"></div>
+          </section>
+          <section class="config-section">
+            <h3>Nuke</h3>
+            <label class="toggle"><input id="nuke-enabled" type="checkbox" checked> Include Nuke (demo values)</label>
+            <div class="fields" id="nuke-fields"></div>
+          </section>
+          <section class="config-section">
+            <h3>Target &amp; Bonuses</h3>
+            <p class="config-note">Demo target: Manyang Lv1. Physical defense 7, magical defense 10, and both absorption rates 1%. Change these for your server.</p>
+            <div class="fields" id="target-fields"></div>
+          </section>
+        </div>
       </div>
     </details>
   </form>
@@ -138,7 +130,7 @@
     <summary><span class="summary-title">Compare Full STR / Your Build / Full INT</span><span class="summary-note">Optional side-by-side view</span></summary>
     <div class="build-compare" id="comparison"></div>
   </details>
-  <p class="disclaimer">HP/MP use the historical hybrid formula; balance and damage use the recovered GameServer engine. Weapon AP is inferred from rounded item tooltip values. Default Fire skill values are version-dependent; imbue secondary-skill scaling is not yet independently verified.</p>
+  <p class="disclaimer">HP/MP use the historical hybrid formula; balance and damage use the recovered GameServer engine. Weapon AP is inferred from rounded item tooltip values. Default sample skill values are version-dependent; imbue secondary-skill scaling is not yet independently verified.</p>
   <footer><a href="docs/DAMAGE_FORMULA.md">GameServer Formula</a> · <a href="docs/VALIDATION.md">Validation</a> · <a href="https://github.com/Mgunbatti/xSilkroad-Hybrid-Calculator">GitHub Source</a></footer>
 </main>
 </body>

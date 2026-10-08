@@ -123,3 +123,20 @@ test('Chinese weapon switch maps mastery and accepts Blade only with supplied ra
  const pure=H.defaults();pure.nuke.enabled=true;
  assert.deepEqual(H.calculate(pure).nuke.normal,H.calculate(pure).nuke.critical);
 });
+
+test('UI offers only three Chinese normal attack masteries; skills remain independent',()=>{
+ const fs=require('node:fs');
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ const select=html.match(/<select id="weapon">([\s\S]*?)<\/select>/);
+ assert.ok(select);
+ const options=[...select[1].matchAll(/<option value="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(options,['sword','spear','bow']);
+ assert.match(html,/Bicheon Normal Attack/);
+ assert.match(html,/Heuksal Normal Attack/);
+ assert.match(html,/Pacheon Normal Attack/);
+ assert.match(html,/only to normal attacks/);
+ for(const title of ['Physical Skill','Imbue','Nuke'])assert.ok(html.includes('<h3>'+title+'</h3>'));
+ const app=fs.readFileSync(require('node:path').join(__dirname,'../hybrid-app.js'),'utf8');
+ assert.match(app,/sword:60,spear:117,bow:84/);
+ assert.doesNotMatch(app,/basicPercent'\)\.value/);
+});

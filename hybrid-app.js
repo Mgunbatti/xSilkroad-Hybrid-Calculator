@@ -53,7 +53,7 @@ function read(){
  s.unspentPoints=val('unspentPoints');s.allocatedSTR=val('strPoints');
  for(const k of ['bonusSTR','bonusINT','extraHP','extraMP','devilRate','attackRate'])s[k]=val(k);
  s.weapon.key=$('weapon').value;
- s.weapon.basicPercent=val('basicPercent');
+ s.weapon.basicPercent=({sword:60,spear:117,bow:84})[s.weapon.key];
  for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])s.weapon[k]=val(k);
  for(const k of ['physicalSkill','imbue','nuke']){
    s[k].enabled=$(k+'-enabled').checked;
@@ -121,38 +121,25 @@ function column(title,result,selected=false){
  return c;
 }
 
-const weaponNames={
- sword:'Bicheon · Sword',blade:'Bicheon · Blade',
- spear:'Heuksal · Spear',glaive:'Heuksal · Glaive',
- bow:'Pacheon · Bow',custom:'Custom weapon'
-};
+const weaponNames={sword:'Bicheon',spear:'Heuksal',bow:'Pacheon'};
 let timer,previousWeapon='sword',previousUsable=usable(),previousLevel=Number($('level').value);
 function rawStats(s){
  const st=H.stats(s);
  $('quick-results').replaceChildren(
-  quickCard('STR / INT',fmt(st.STR)+' / '+fmt(st.INT),'','activity','stat'),
-  quickCard('Maximum HP',fmt(st.HP)),
-  quickCard('Maximum MP',fmt(st.MP)),
-  quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),
-  quickCard('Magical Balance',fmt(st.magicalBalance)+'%'),
-  quickCard('Physical Attack','—','Enter weapon stats to calculate'),
-  quickCard('Physical Critical','—','Enter weapon stats to calculate'),
-  quickCard('Physical + Imbue','—','Enter weapon stats to calculate'),
-  quickCard('Magical Nuke','—','Enter weapon stats to calculate')
+  quickCard('Maximum HP',fmt(st.HP),'','heart','stat'),
+  quickCard('Maximum MP',fmt(st.MP),'','droplet','stat'),
+  quickCard('Physical Balance',fmt(st.physicalBalance)+'%','','swords','stat'),
+  quickCard('Magical Balance',fmt(st.magicalBalance)+'%','','flame','stat'),
+  quickCard('Physical Damage','—','Enter weapon tooltip values','sword','damage'),
+  quickCard('Critical Physical','—','Enter weapon tooltip values','target','damage'),
+  quickCard('Nuke Damage','—','Enter weapon tooltip values','spark','damage')
  );
 }
 function refreshWeapon(){
  const key=$('weapon').value;
- const provisional=key==='custom';
- $('manual-rate-wrap').hidden=false;
- $('setup-label').textContent=weaponNames[key]+(key==='sword'?' (+7 demo)':'')+' · Manyang Lv1';
- if(provisional) {
-  $('weapon-warning').textContent='Enter your weapon tooltip and basic attack percentage.';
- } else if(key!=='sword'){
-  $('weapon-warning').textContent='Enter '+weaponNames[key]+' tooltip values. Copper Sword values are not reused.';
- }else{
-  $('weapon-warning').textContent='Sample: Copper Sword (+7). Your server may use different values.';
- }
+ $('basicPercentDisplay').textContent=({sword:60,spear:117,bow:84})[key]+'%';
+ $('setup-label').textContent=weaponNames[key]+' Normal Attack · Manyang Lv1';
+ $('weapon-warning').textContent=key==='sword' ? 'Copper Sword (+7) sample. Replace with your server weapon stats.' : 'Enter your weapon tooltip values below. Copper Sword sample values are not reused.';
 }
 function update(){
  clearTimeout(timer);syncPoints();refreshWeapon();
@@ -186,17 +173,15 @@ function clearWeaponDemo(key){
  if(key==='sword'){
   const w=defaults.weapon;
   for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
-    $(f).value=String(w[f]);
+   $(f).value=String(w[f]);
   $('bonusSTR').value=String(defaults.bonusSTR);
   $('bonusINT').value=String(defaults.bonusINT);
- }else {
+ } else {
   for(const f of ['physicalMin','physicalMax','magicalMin','magicalMax','physicalReinforceMin','physicalReinforceMax','magicalReinforceMin','magicalReinforceMax'])
-    $(f).value='';
+   $(f).value='';
   $('bonusSTR').value='0';$('bonusINT').value='0';
  }
- $('basicPercent').value=String(({sword:60,blade:60,spear:117,glaive:117,bow:84})[key]??'');
- previousWeapon=key;
- refreshWeapon();
+ previousWeapon=key;refreshWeapon();
 }
 $('hybrid-form').addEventListener('submit',e=>e.preventDefault());
 $('hybrid-form').addEventListener('input',e=>{
@@ -228,6 +213,6 @@ $('reset').addEventListener('click',()=>{
  }
  previousWeapon='sword';
  previousUsable=usable();previousLevel=Number($('level').value);
- $('basicPercent').value='60';syncPoints();update();
+ syncPoints();update();
 });
-$('basicPercent').value='60';syncPoints();update();
+syncPoints();update();

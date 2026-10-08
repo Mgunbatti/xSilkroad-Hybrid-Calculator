@@ -102,6 +102,24 @@ test('optional nuke and imbue results exist only when enabled',()=>{
 test('prevents invalid or unverified build weapon descriptors',()=>{
  const s=H.defaults();s.weapon.key='blade';
  assert.throws(()=>H.calculate(s),/Unverified/);
- s.weapon.key='custom';s.weapon.basicPercent=90;assert.doesNotThrow(()=>H.calculate(s));
+ s.weapon.basicPercent=90;assert.doesNotThrow(()=>H.calculate(s));
+ s.weapon.key='custom';assert.doesNotThrow(()=>H.calculate(s));
  s.allocatedSTR=999999;assert.throws(()=>H.calculate(s),/Allocated STR/);
+});
+
+
+test('Chinese weapon switch maps mastery and accepts Blade only with supplied rate',()=>{
+ const s=H.defaults();
+ for(const name of ['sword','spear','glaive','bow']) {
+  s.weapon.key=name;
+  assert.doesNotThrow(()=>H.calculate(s));
+ }
+ s.weapon.key='blade';
+ s.weapon.basicPercent=undefined;
+ assert.throws(()=>H.calculate(s),/Manual basic descriptor/);
+ s.weapon.basicPercent=76;
+ const result=H.calculate(s);
+ assert.ok(result.physical.normal.max>=1);
+ const pure=H.defaults();pure.nuke.enabled=true;
+ assert.deepEqual(H.calculate(pure).nuke.normal,H.calculate(pure).nuke.critical);
 });

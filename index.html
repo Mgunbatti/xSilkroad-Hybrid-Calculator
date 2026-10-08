@@ -7,11 +7,11 @@
   <meta name="description" content="Compare Silkroad Chinese STR and INT builds, HP, MP, physical, critical and magical damage.">
   <title>xSilkroad Hybrid Calculator</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="hybrid.css?v=20261008-7">
+  <link rel="stylesheet" href="hybrid.css?v=20261008-10">
   <script defer src="engine.js?v=20261008-7"></script>
   <script defer src="hybrid-engine.js?v=20261008-7"></script>
   <script defer src="skill-catalog.js?v=20261008-8"></script>
-  <script defer src="hybrid-app.js?v=20261008-9"></script>
+  <script defer src="hybrid-app.js?v=20261008-10"></script>
 </head>
 <body>
 <header>
@@ -67,7 +67,7 @@
     </div>
 
     <details class="panel customization-panel" id="customize">
-      <summary><span class="summary-title">Advanced Settings · Equipment / Skills / Target</span><span class="summary-note">Enter equipment and skill values</span></summary>
+      <summary><span class="summary-title">Advanced Settings · Equipment / Skills / Target</span><span class="summary-note">Weapon, skills and target</span></summary>
       <div class="custom-grid">
         <div class="config-stack">
           <section class="config-section">
@@ -77,11 +77,11 @@
               <option value="original">SILKROAD_R_SHARD (Original data)</option>
               <option value="vsro">SRO_VT_SHARD (vSRO)</option>
             </select>
-            <p class="config-note">Select your server version. The same Damage Engine is used for both. Manual skill values remain available.</p>
+            <p class="config-note">Select the database matching your server.</p>
           </section>
           <section class="config-section">
             <h3>Normal Attack</h3>
-            <label for="weapon">Chinese mastery — normal attack only</label>
+            <label for="weapon">Weapon mastery</label>
             <select id="weapon">
               <option value="sword" selected>Bicheon Normal Attack</option>
               <option value="spear">Heuksal Normal Attack</option>
@@ -91,15 +91,21 @@
             <details class="inner-details" id="weapon-details">
               <summary>Weapon Values</summary>
               <label for="apMode">AP source</label><select id="apMode"><option value="tooltip">Weapon tooltip + reinforcement</option><option value="displayed">Character displayed AP</option></select><div class="fields" id="weapon-fields"></div>
-              <p class="config-note">Weapon stats are separate from the normal attack mastery. Enter your own weapon values for accurate comparisons.</p>
+              <p class="config-note">Enter your server's weapon values.</p>
             </details>
           </section>
           <section class="config-section">
             <h3>Imbue</h3>
             <div class="field"><label for="imbue-group">Skill series (database)</label><select id="imbue-group"><option value="">Manual values</option></select></div>
             <div class="field"><label for="imbue-skillLevel">Learned skill level</label><select id="imbue-skillLevel"><option value="">Auto: highest available</option></select></div>
-            <label class="toggle"><input id="imbue-enabled" type="checkbox"> Include Imbue</label>
-            <div class="fields" id="imbue-fields"></div><label for="imbueMode">Imbue calculation</label><select id="imbueMode"><option value="attack">Historical attack SkillRate</option><option value="secondary">Recovered secondary caller</option></select><div class="fields" id="secondary-fields" hidden></div>
+            <p class="skill-auto-note" id="imbue-auto-note" hidden></p>
+            
+            <div class="fields skill-manual-fields" id="imbue-fields"></div>
+            <details class="inner-details"><summary>Advanced damage options</summary>
+              <label for="imbueMode">Imbue calculation</label>
+              <select id="imbueMode"><option value="attack">Historical attack SkillRate</option><option value="secondary">Recovered secondary caller</option></select>
+              <div class="fields" id="secondary-fields" hidden></div>
+            </details>
           </section>
           <section class="config-section">
             <h3>Additional Stats</h3>
@@ -119,19 +125,21 @@
             <h3>Physical Skill</h3>
             <div class="field"><label for="physicalSkill-group">Skill series (database)</label><select id="physicalSkill-group"><option value="">Manual values</option></select></div>
             <div class="field"><label for="physicalSkill-skillLevel">Learned skill level</label><select id="physicalSkill-skillLevel"><option value="">Auto: highest available</option></select></div>
-            <label class="toggle"><input id="physicalSkill-enabled" type="checkbox"> Include Physical Skill</label>
-            <div class="fields" id="physicalSkill-fields"></div>
+            <p class="skill-auto-note" id="physicalSkill-auto-note" hidden></p>
+            
+            <div class="fields skill-manual-fields" id="physicalSkill-fields"></div>
           </section>
           <section class="config-section">
             <h3>Nuke / Magical Skill</h3>
             <div class="field"><label for="nuke-group">Skill series (database)</label><select id="nuke-group"><option value="">Manual values</option></select></div>
             <div class="field"><label for="nuke-skillLevel">Learned skill level</label><select id="nuke-skillLevel"><option value="">Auto: highest available</option></select></div>
-            <label class="toggle"><input id="nuke-enabled" type="checkbox"> Include Nuke</label>
-            <div class="fields" id="nuke-fields"></div>
+            <p class="skill-auto-note" id="nuke-auto-note" hidden></p>
+            
+            <div class="fields skill-manual-fields" id="nuke-fields"></div>
           </section>
           <section class="config-section">
             <h3>Target &amp; Bonuses</h3>
-            <p class="config-note">Target: Manyang Lv1. Physical defense 7, magical defense 10, and both absorption rates 1%. Change these for your server.</p>
+            <p class="config-note">Manyang Lv1 defaults. Adjust for your server.</p>
             <div class="fields" id="target-fields"></div>
           </section>
         </div>

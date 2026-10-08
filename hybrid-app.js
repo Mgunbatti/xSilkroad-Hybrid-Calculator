@@ -37,7 +37,12 @@ function refreshSkillSelectors(){
   const select=$(k+'-group'),previous=select.value;
   const choices=listFor(k);
   select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,skillLabel(x.group))));
-  if(choices.some(c=>c.group===previous))select.value=previous;
+  const stillAvailable=choices.some(c=>c.group===previous);
+  if(stillAvailable)select.value=previous;
+  // A group unlocked at a higher mastery must not remain active through
+  // its old, hidden AP when the character level or mastery is lowered.
+  if(previous && !stillAvailable)
+   for(const field of ['min','max','rate'])$(k+'-'+field).value='';
   const lvl=$(k+'-skillLevel'),old=lvl.value;
   lvl.replaceChildren(option('','Auto: highest available'));
   const group=select.value;

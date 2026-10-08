@@ -133,3 +133,16 @@ button:focus-visible,summary:focus-visible{outline:2px solid #58a6ff}
 .quick-card{min-height:76px;padding:12px 14px}
 .quick-results{gap:10px;margin-top:12px}
 @media(max-width:480px){.quick-card{min-height:70px;padding:12px}}
+
+/* Character input order: distribution → extra attributes → C-screen AP. */
+.controls-panel .main-level{max-width:260px}
+.controls-panel .extra-stats{margin-top:8px;margin-bottom:18px}
+.controls-panel .character-ap-section{margin:14px 0 16px;padding-top:15px;border-top:1px solid #30363d}
+.controls-panel .ap-heading{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;color:#dbeafe;font-size:13px;font-weight:600;margin-bottom:12px}
+.controls-panel .ap-heading strong{font-weight:600}
+.controls-panel .ap-heading span{font-size:11px;color:#9198a1;font-weight:400}
+.controls-panel .character-ap-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.controls-panel .field{min-width:0}
+.controls-panel .character-ap-fields .field input,.controls-panel .extra-stats .field input{width:100%;min-width:0}
+.config-section #reinforcement-fields[hidden]{display:none!important}
+@media(max-width:480px){.controls-panel .character-ap-fields{gap:8px}.controls-panel .ap-heading{margin-bottom:8px}}

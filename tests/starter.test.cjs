@@ -44,12 +44,12 @@ test('damage cards are ordered in adjacent comparison pairs',()=>{
  const app=readFileSync(join(__dirname,'../hybrid-app.js'),'utf8');
  const html=readFileSync(join(__dirname,'../index.html'),'utf8');
  const css=readFileSync(join(__dirname,'../hybrid.css'),'utf8');
- assert.match(app,/\['normal','Normal Attack'\],\['normalImbue','Normal \+ Imbue'\]/);
- assert.match(app,/\['physicalSkill','Physical Skill'\],\['physicalSkillImbue','Physical Skill \+ Imbue'\]/);
- assert.match(app,/\['nuke','Nuke'\],\['nukeImbue','Nuke \+ Imbue'\]/);
+ assert.match(app,/\['normal','normal'\],\['normalImbue','normalImbue'\]/);
+ assert.match(app,/\['physicalSkill','physicalSkill'\],\['physicalSkillImbue','physicalSkillImbue'\]/);
+ assert.match(app,/\['nuke','nuke'\],\['nukeImbue','nukeImbue'\]/);
  assert.match(css,/\.quick-results\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(html,/<option value="bow" selected>/);
- assert.match(html,/<option value="vsro" selected>/);
+ assert.match(html,/<option value="bow" selected[^>]*>/);
+ assert.match(html,/<option value="vsro" selected[^>]*>/);
  assert.match(html,/id="strPoints"[^>]*value="297"/);
  assert.match(html,/id="bonusSTR"[^>]*value="26"/);
  assert.match(html,/id="bonusINT"[^>]*value="56"/);

@@ -1,25 +1,17 @@
 'use strict';
 const H=globalThis.HybridEngine;
 const $=id=>document.getElementById(id);
-const fmt=n=>Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
+const I=globalThis.SilkroadI18n, t=(key,params)=>I.t(key,params);
+const fmt=n=>I.number(n);
 const defaults=H.defaults();
 
 /* Database-backed selectors; the optional manual fields remain available. */
 let skillDatabase=null;
+let catalogueFailed=false;
 const kindFor={physicalSkill:'physical',imbue:'imbue',nuke:'nuke'};
-const knownSkillNames={
- SKILL_CH_FIRE_GIGONGSUL_A:'Flame Wave – Arrow',
- SKILL_CH_COLD_GIGONGSUL_A:'Snow Storm – Ice Shot',
- SKILL_CH_LIGHTNING_CHUNDUNG_A:'Shock Lion Shout',
- SKILL_CH_FIRE_GIGONGTA_C:'Poison Fire Force',
- SKILL_CH_COLD_GIGONGTA_C:'Ice Ocean Force',
- SKILL_CH_LIGHTNING_GIGONGTA_C:'Thunder King Force',
- SKILL_CH_BOW_POWER_D:'Strong Bow – Will',
- SKILL_CH_FIRE_GIGONGTA_E:'Fire Imbue (Lv100)',
- SKILL_CH_FIRE_GIGONGSUL_F:'Flame Wave – Disintegrate'
-};
+const skillNames=globalThis.SilkroadSkillNames;
 function skillLabel(g){
- return knownSkillNames[g] || g.replace(/^SKILL_CH_/,'').replaceAll('_',' ').replace(/\b([A-Z])\b/g,'$1');
+ return skillNames.label(skillDatabase?.groups[g]?.nameKey,g,I.locale,t);
 }
 // Starting loadout uses actual skill records, never fabricated skill damage.
 // If a series is unavailable after lowering level, use an eligible earlier
@@ -76,7 +68,7 @@ function refreshSkillSelectors(){
  for(const k of Object.keys(kindFor)){
   const select=$(k+'-group'),previous=select.value;
   const choices=listFor(k);
-  select.replaceChildren(option('','Manual values'),...choices.map(x=>option(x.group,skillLabel(x.group))));
+  select.replaceChildren(option('',t('manual')),...choices.map(x=>option(x.group,skillLabel(x.group))));
   const stillAvailable=choices.some(c=>c.group===previous);
   if(stillAvailable)select.value=previous;
   else if(previous) {
@@ -86,11 +78,11 @@ function refreshSkillSelectors(){
    else for(const field of ['min','max','rate'])$(k+'-'+field).value='';
   }
   const lvl=$(k+'-skillLevel'),old=lvl.value;
-  lvl.replaceChildren(option('','Auto: highest available'));
+  lvl.replaceChildren(option('',t('auto')));
   const group=select.value;
   if(group){
    const list=globalThis.SilkroadSkillCatalog.availableLevels(skillDatabase,group,masterFor(k));
-   for(const rec of list)lvl.append(option(String(rec[1]),'Lv '+rec[1]+' · Mastery '+rec[2]));
+   for(const rec of list)lvl.append(option(String(rec[1]),t('skillLevel',{level:fmt(rec[1]),mastery:fmt(rec[2])})));
    if(list.some(rec=>String(rec[1])===old))lvl.value=old;
   }
   const row=selectedSkill(k);
@@ -102,7 +94,7 @@ function refreshSkillSelectors(){
    $(k+'-min').value=String(row.powerMin);
    $(k+'-max').value=String(row.powerMax);
    $(k+'-rate').value=String(row.primaryDamagePercent);
-   autoNote.textContent='Lv '+row.skillLevel+' · Values loaded automatically';
+   autoNote.textContent=t('loaded',{level:fmt(row.skillLevel)});
   }
  }
 }
@@ -115,7 +107,7 @@ const profileSources={
  original:'data/chinese-skills.json',
  vsro:'data/chinese-skills-vsro.json'
 };
-async function loadSkillProfile(which){
+async function loadSkillProfile(which,sequence){
  if(!Object.prototype.hasOwnProperty.call(profileSources,which))
    throw new Error('Unknown skill data profile.');
  if(!skillProfiles[which]){
@@ -125,7 +117,8 @@ async function loadSkillProfile(which){
   if(data.schemaVersion!==1||!data.groups)throw new Error('Invalid skill catalogue');
   skillProfiles[which]=data;
  }
- skillDatabase=skillProfiles[which];
+ if(sequence!==profileLoadSequence)return;
+ skillDatabase=skillProfiles[which];catalogueFailed=false;
  refreshSkillSelectors();
  if(applyStarterSkills){
   selectStarterSkills();
@@ -136,18 +129,19 @@ async function loadSkillProfile(which){
 let profileLoadSequence=0;
 function switchSkillProfile(){
  const selected=$('skillProfile').value,sequence=++profileLoadSequence;
- skillDatabase=null;
- loadSkillProfile(selected).catch(err=>{
+ skillDatabase=null;catalogueFailed=false;
+ loadSkillProfile(selected,sequence).catch(err=>{
   if(sequence!==profileLoadSequence)return;
+  catalogueFailed=true;
   const e=$('error');e.hidden=false;
-  e.textContent='Skill catalogue unavailable: '+err.message+' (manual entry still works).';
+  e.textContent=t('catalogError');
  });
 }
 switchSkillProfile();
 
 function field(parent,id,label,value,min=0,step='any'){
   const wrap=document.createElement('div');wrap.className='field';
-  const lab=document.createElement('label');lab.htmlFor=id;lab.textContent=label;
+  const lab=document.createElement('label');lab.htmlFor=id;lab.dataset.i18n=label;lab.textContent=t(label);
   const input=document.createElement('input');
   Object.assign(input,{id,type:'number',value:value===null?'':String(value),min:String(min),step,required:true});
   wrap.append(lab,input);parent.append(wrap);
@@ -156,26 +150,26 @@ function field(parent,id,label,value,min=0,step='any'){
 // fabricated C-screen min/max data. Replace it with a real character's AP.
 const demoAP={physicalMin:3012,physicalMax:3012,magicalMin:2638,magicalMax:2638};
 for (const [key,label] of [
- ['physicalMin','Physical AP min'],['physicalMax','Physical AP max'],
- ['magicalMin','Magical AP min'],['magicalMax','Magical AP max']
+ ['physicalMin','physicalMin'],['physicalMax','physicalMax'],
+ ['magicalMin','magicalMin'],['magicalMax','magicalMax']
 ]) field($('weapon-fields'),key,label,demoAP[key]);
 for (const [key,label] of [
- ['physicalReinforceMin','Physical reinforce min %'],['physicalReinforceMax','Physical reinforce max %'],
- ['magicalReinforceMin','Magical reinforce min %'],['magicalReinforceMax','Magical reinforce max %']
+ ['physicalReinforceMin','physicalReinforceMin'],['physicalReinforceMax','physicalReinforceMax'],
+ ['magicalReinforceMin','magicalReinforceMin'],['magicalReinforceMax','magicalReinforceMax']
 ]) field($('reinforcement-fields'),key,label,defaults.weapon[key]);
-for (const [key,label] of [['physicalSkill','Physical skill'],['imbue','Imbue'],['nuke','Nuke']]) {
+for (const [key,label] of [['physicalSkill','physicalSkill'],['imbue','imbue'],['nuke','nuke']]) {
  const x=defaults[key];
- for(const [fieldName,caption] of [['min','Skill AP min'],['max','Skill AP max'],['rate','Damage rate %']])
+ for(const [fieldName,caption] of [['min','skillMin'],['max','skillMax'],['rate','skillRate']])
    field($(key+'-fields'),key+'-'+fieldName,caption,x[fieldName],0,'any');
 }
 for(const [key,label,value] of [
- ['targetLevel','Target level',1],
- ['physicalDefense','Physical defense',7],['magicalDefense','Magical defense',10],
- ['physicalAbsorption','Physical absorption %',1],['magicalAbsorption','Magical absorption %',1],
- ['physicalBonus','Physical damage bonus %',0],['magicalBonus','Magical damage bonus %',0]
+ ['targetLevel','targetLevel',1],
+ ['physicalDefense','physicalDefense',7],['magicalDefense','magicalDefense',10],
+ ['physicalAbsorption','physicalAbsorption',1],['magicalAbsorption','magicalAbsorption',1],
+ ['physicalBonus','physicalBonus',0],['magicalBonus','magicalBonus',0]
 ]) field($('target-fields'),key,label,value,key==='targetLevel'||key==='parry'?1:0,key==='targetLevel'?'1':'any');
 for(const [key,label] of [
- ['physical','Weapon mastery level'],['imbue','Imbue element mastery level'],['nuke','Magical skill mastery level']
+ ['physical','physicalMastery'],['imbue','imbueMastery'],['nuke','nukeMastery']
 ]) field($('mastery-fields'),'mastery-'+key,label,Number($('level').value),0,'1');
 const ids=[...document.querySelectorAll('#hybrid-form input, #hybrid-form select')].map(e=>e.id);
 const initialValues=Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value]));
@@ -192,9 +186,9 @@ function syncPoints(rescale=false){
  if(rescale && previousUsable>0) next=Math.round(prior/previousUsable*n);
  slider.max=String(n);slider.value=String(Math.max(0,Math.min(n,next)));
  previousUsable=n;
- $('available-note').textContent=n+' points available · '+(Number($('level').value)-1)*3+' earned in total';
- $('str-alloc').textContent='STR '+slider.value+' pts';
- $('int-alloc').textContent='INT '+(n-Number(slider.value))+' pts';
+ $('available-note').textContent=t('available',{available:fmt(n),total:fmt((Number($('level').value)-1)*3)});
+ $('str-alloc').textContent=t('strAllocation',{points:fmt(slider.value)});
+ $('int-alloc').textContent=t('intAllocation',{points:fmt(n-Number(slider.value))});
 }
 function read(){
  const s=H.defaults();
@@ -227,53 +221,53 @@ function read(){
 }
 function row(name,value,description=''){
  const div=document.createElement('div');div.className='build-row';
- const lab=document.createElement('span');lab.textContent=name;
- const strong=document.createElement('strong');strong.textContent=value;
+ const lab=document.createElement('span');lab.textContent=t(name);
+ const strong=document.createElement('strong');strong.textContent=t(value);
  div.append(lab,strong);
- if(description){const small=document.createElement('small');small.textContent=description;div.append(small);}
+ if(description){const small=document.createElement('small');small.textContent=t(description);div.append(small);}
  return div;
 }
 function damageRange(r,crit=false){
  if(!r)return '—';
  const d=crit?r.critical:r.normal;
- return fmt(d.min)+' – '+fmt(d.max);
+ return '\u2066'+fmt(d.min)+' – '+fmt(d.max)+'\u2069';
 }
 function quickCard(label, value, note='',icon='activity',kind='stat'){
  const c=document.createElement('div');c.className='quick-card '+kind;
- const heading=document.createElement('span');heading.textContent=label;
+ const heading=document.createElement('span');heading.textContent=t(label);
  const number=document.createElement('strong');number.textContent=value;
  const glyph=document.createElement('span');glyph.className='mini-icon';glyph.setAttribute('aria-hidden','true');glyph.textContent=({heart:'♡',droplet:'♧',swords:'⚔',flame:'♨',sword:'⚔',target:'◎',spark:'✦',activity:'◈'})[icon]||'◈';c.append(glyph,heading,number);
  if(note){const small=document.createElement('small');small.textContent=note;c.append(small);}
  return c;
 }
 const damageOutputs=[
- ['normal','Normal Attack'],['normalImbue','Normal + Imbue'],
- ['physicalSkill','Physical Skill'],['physicalSkillImbue','Physical Skill + Imbue'],
- ['nuke','Nuke'],['nukeImbue','Nuke + Imbue']
+ ['normal','normal'],['normalImbue','normalImbue'],
+ ['physicalSkill','physicalSkill'],['physicalSkillImbue','physicalSkillImbue'],
+ ['nuke','nuke'],['nukeImbue','nukeImbue']
 ];
 const hasPhysicalCritical=key=>!['nuke','nukeImbue'].includes(key);
 function renderQuick(result){
  const st=result.stats;
- const cards=[quickCard('HP',fmt(st.HP)),quickCard('MP',fmt(st.MP)),quickCard('Physical Balance',fmt(st.physicalBalance)+'%'),quickCard('Magical Balance',fmt(st.magicalBalance)+'%')];
+ const cards=[quickCard('HP',fmt(st.HP)),quickCard('MP',fmt(st.MP)),quickCard('physicalBalance',fmt(st.physicalBalance)+'%'),quickCard('magicalBalance',fmt(st.magicalBalance)+'%')];
  for(const [key,label] of damageOutputs){
-  cards.push(quickCard(label,damageRange(result[key]),hasPhysicalCritical(key)?('Critical: '+damageRange(result[key],true)):'','activity','damage'));
+  cards.push(quickCard(label,damageRange(result[key]),hasPhysicalCritical(key)?t('critical',{value:damageRange(result[key],true)}):'','activity','damage'));
  }
  $('quick-results').replaceChildren(...cards);
 }
 function column(title,result,selected=false){
  const c=document.createElement('div');c.className='build-col'+(selected?' selected':'');
- const h=document.createElement('h3');h.textContent=title;c.append(h);
- const sub=document.createElement('div');sub.className='sub';sub.textContent=result.stats.allocatedSTR+' STR pts / '+result.stats.allocatedINT+' INT pts';c.append(sub);
+ const h=document.createElement('h3');h.textContent=t(title);c.append(h);
+ const sub=document.createElement('div');sub.className='sub';sub.textContent=t('allocation',{str:fmt(result.stats.allocatedSTR),int:fmt(result.stats.allocatedINT)});c.append(sub);
  const st=result.stats,ap=result.ap;
  c.append(row('STR / INT',fmt(st.STR)+' / '+fmt(st.INT)));
  c.append(row('HP / MP',fmt(st.HP)+' / '+fmt(st.MP)));
- c.append(row('Physical Balance',fmt(st.physicalBalance)+'%'));
- c.append(row('Magical Balance',fmt(st.magicalBalance)+'%'));
- c.append(row('Physical AP'+($('apMode').value==='tooltip'?' (estimated)':''),ap?ap.physical.map(fmt).join(' – '):'—'));
- c.append(row('Magical AP'+($('apMode').value==='tooltip'?' (estimated)':''),ap?ap.magical.map(fmt).join(' – '):'—'));
+ c.append(row('physicalBalance',fmt(st.physicalBalance)+'%'));
+ c.append(row('magicalBalance',fmt(st.magicalBalance)+'%'));
+ c.append(row(($('apMode').value==='tooltip'?t('estimated',{label:t('physicalAP')}):t('physicalAP')),ap?ap.physical.map(fmt).join(' – '):'—'));
+ c.append(row(($('apMode').value==='tooltip'?t('estimated',{label:t('magicalAP')}):t('magicalAP')),ap?ap.magical.map(fmt).join(' – '):'—'));
  for(const [key,label] of damageOutputs){
   c.append(row(label,damageRange(result[key])));
-  if(hasPhysicalCritical(key))c.append(row(label+' critical',damageRange(result[key],true)));
+  if(hasPhysicalCritical(key))c.append(row(t('criticalLabel',{label:t(label)}),damageRange(result[key],true)));
  }
  return c;
 }
@@ -286,30 +280,31 @@ function rawStats(s){
 }
 function refreshWeapon(){
  const key=$('weapon').value;
- $('setup-label').textContent=weaponNames[key]+' · '+(Number($('targetLevel').value)===1?'Manyang Lv1':'Target Lv'+$('targetLevel').value);
+ $('setup-label').textContent=weaponNames[key]+' · '+(Number($('targetLevel').value)===1?'Manyang · ':'')+t('targetSummary',{level:fmt($('targetLevel').value)});
 }
 function update(){
  clearTimeout(timer);syncPoints();refreshWeapon();refreshSkillSelectors();
  for(const k of ['physical','imbue','nuke'])$('mastery-'+k).max=$('level').value;
- $('character-ap-heading').textContent=$('apMode').value==='displayed'?'Character Attack Power':'Weapon Attack Power';
- $('ap-source-note').textContent=$('apMode').value==='displayed'?'(C screen)':'(tooltip)';
+ $('character-ap-heading').textContent=t($('apMode').value==='displayed'?'characterAP':'weaponAP');
+ $('ap-source-note').textContent=t($('apMode').value==='displayed'?'cScreen':'tooltip');
  $('ap-demo-note').hidden=$('apMode').value!=='displayed' ||
   !Object.entries(demoAP).every(([field,value])=>Number($(field).value)===value);
- for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=(k.startsWith('physical')?'Physical':'Magical')+' AP '+(k.endsWith('Min')?'min':'max');
+ for(const k of ['physicalMin','physicalMax','magicalMin','magicalMax'])document.querySelector('label[for="'+k+'"]').textContent=t(k);
  $('reinforcement-fields').hidden=$('apMode').value==='displayed';
  try {
   const s=read(),results=H.compare(s);
   renderQuick(results.selected);
   $('comparison').replaceChildren(...(results.fullSTR ? [
-    column('Full STR',results.fullSTR), column('Your Build',results.selected,true), column('Full INT',results.fullINT)
-  ] : [column('Your Build',results.selected,true), row('Comparison','Enter weapon tooltip and reinforcement values to compare other builds.')]));
-  $('error').hidden=true;
+    column('fullSTR',results.fullSTR), column('yourBuild',results.selected,true), column('fullINT',results.fullINT)
+  ] : [column('yourBuild',results.selected,true), row('comparison','comparisonHelp')]));
+  $('error').hidden=!catalogueFailed;
+  if(catalogueFailed)$('error').textContent=t('catalogError');
  } catch(e) {
   $('comparison').replaceChildren();
   try { rawStats(readStats()); }
   catch(_) { $('quick-results').replaceChildren(); }
   $('error').hidden=false;
-  $('error').textContent=e.message;
+  $('error').textContent=I.error(e.message);
  }
 }
 function readStats(){
@@ -376,4 +371,6 @@ $('reset').addEventListener('click',()=>{
  applyStarterSkills=true;
  syncPoints();switchSkillProfile();
 });
+globalThis.addEventListener('languagechange',()=>update());
+I.init();
 syncPoints();update();

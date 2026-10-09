@@ -4,7 +4,8 @@
   "scripts": {
     "test": "node --test tests/*.cjs",
     "test:live": "node --test tests/live-game.cjs",
-    "build": "node --check engine.js && node --check hybrid-engine.js && node --check hybrid-app.js",
+    "build": "node --check engine.js && node --check hybrid-engine.js && node --check hybrid-app.js && node --check i18n.js && node --check i18n-en.js && node --check skill-names.js && node --check skill-names-data.js",
+    "i18n:sync": "node scripts/sync-english.cjs",
     "test:hybrid": "node --test tests/hybrid.test.cjs",
     "test:ui": "node --test tests/browser/*.cjs"
   },

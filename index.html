@@ -8,6 +8,10 @@
   <title>xSilkroad Hybrid Calculator</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="hybrid.css?v=20261008-12">
+  <script defer src="i18n-en.js"></script>
+  <script defer src="i18n.js"></script>
+  <script defer src="skill-names-data.js"></script>
+  <script defer src="skill-names.js"></script>
   <script defer src="engine.js?v=20261008-7"></script>
   <script defer src="hybrid-engine.js?v=20261008-7"></script>
   <script defer src="skill-catalog.js?v=20261008-8"></script>
@@ -15,141 +19,143 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="./">◈ xSilkroad <small>HYBRID CALCULATOR</small></a>
-  <span class="status">CHINESE BUILD WORKSHOP</span>
+  <a class="brand" href="./">◈ xSilkroad <small data-i18n="brand">HYBRID CALCULATOR</small></a>
+  <span class="status" data-i18n="workshop">CHINESE BUILD WORKSHOP</span>
+  <div class="language-control"><label for="language" data-i18n="language">Language</label><select id="language" dir="ltr"></select></div>
 </header>
 <main class="hybrid-main">
   <section class="hero">
-    <span class="eyebrow">THE BUILD LAB</span>
-    <h1>Find your <em>balance.</em></h1>
-    <p>Move points between STR and INT. See your HP, MP and damage change instantly.</p>
+    <span class="eyebrow" data-i18n="lab">THE BUILD LAB</span>
+    <h1 data-i18n="hero">Find your <em>balance.</em></h1>
+    <p data-i18n="intro">Move points between STR and INT. See your HP, MP and damage change instantly.</p>
   </section>
 
   <form id="hybrid-form" novalidate>
     <div class="overview-grid">
       <section class="panel controls-panel">
-        <div class="section-heading"><span class="step">01</span><h2>Build your character</h2></div>
+        <div class="section-heading"><span class="step">01</span><h2 data-i18n="build">Build your character</h2></div>
         <div class="field main-level">
-          <label for="level">Character level</label>
+          <label for="level" data-i18n="level">Character level</label>
           <input id="level" type="number" min="1" max="255" step="1" value="100">
         </div>
         <div class="slider-section">
-          <div class="slider-label"><label for="strPoints">STR / INT distribution</label><span id="available-note"></span></div>
+          <div class="slider-label"><label for="strPoints" data-i18n="distribution">STR / INT distribution</label><span id="available-note"></span></div>
           <input class="wide-slider" id="strPoints" type="range" min="0" max="297" step="1" value="297">
           <div class="ratio-line"><span id="str-alloc"></span><span id="int-alloc"></span></div>
-          <div class="presets" aria-label="Build presets">
-            <button type="button" data-ratio="1">Full STR</button>
+          <div class="presets" aria-label="Build presets" data-i18n-aria="presets">
+            <button type="button" data-ratio="1" data-i18n="fullSTR">Full STR</button>
             <button type="button" data-ratio=".8888888888888888">8:1</button>
             <button type="button" data-ratio=".875">7:1</button>
             <button type="button" data-ratio=".5">1:1</button>
-            <button type="button" data-ratio="0">Full INT</button>
+            <button type="button" data-ratio="0" data-i18n="fullINT">Full INT</button>
           </div>
         </div>
         <div class="control-grid extra-stats">
           <div class="field">
-            <label for="bonusSTR">Extra STR</label>
+            <label for="bonusSTR" data-i18n="bonusSTR">Extra STR</label>
             <input id="bonusSTR" type="number" min="0" step="1" value="26">
           </div>
           <div class="field">
-            <label for="bonusINT">Extra INT</label>
+            <label for="bonusINT" data-i18n="bonusINT">Extra INT</label>
             <input id="bonusINT" type="number" min="0" step="1" value="56">
           </div>
         </div>
         <div class="character-ap-section">
-          <div class="ap-heading"><strong id="character-ap-heading">Character Attack Power</strong> <span id="ap-source-note">(C screen)</span></div>
+          <div class="ap-heading"><strong id="character-ap-heading" data-i18n="characterAP">Character Attack Power</strong> <span id="ap-source-note" data-i18n="cScreen">(C screen)</span></div>
           <div id="weapon-fields" class="fields character-ap-fields"></div>
-          <p id="ap-demo-note" class="ap-demo-note">Demo AP from earlier Lv100 Bow example: 3012 physical / 2638 magical (min=max). Replace with your C-screen ranges for accurate results.</p>
+          <p id="ap-demo-note" class="ap-demo-note" data-i18n="demo">Demo AP from earlier Lv100 Bow example: 3012 physical / 2638 magical (min=max). Replace with your C-screen ranges for accurate results.</p>
         </div>
         <div class="setup-pill"><span class="dot"></span><span id="setup-label">Bicheon · Manyang Lv1</span></div>
 
-        <button type="button" class="customize-shortcut" id="open-customize">Customize weapon &amp; skills <span aria-hidden="true">↗</span></button>
+        <button type="button" class="customize-shortcut" id="open-customize"><span data-i18n="customize">Customize weapon &amp; skills</span> <span aria-hidden="true">↗</span></button>
       </section>
 
       <section class="panel results-panel">
         <div class="results-header">
-          <div class="section-heading"><span class="step">02</span><h2>Your build results</h2></div>
-          <button id="reset" type="button">Reset</button>
+          <div class="section-heading"><span class="step">02</span><h2 data-i18n="results">Your build results</h2></div>
+          <button id="reset" type="button" data-i18n="reset">Reset</button>
         </div>
-        <div class="result-section-label">Character stats</div><div id="quick-results" class="quick-results" aria-live="polite"></div>
+        <div class="result-section-label" data-i18n="stats">Character stats</div><div id="quick-results" class="quick-results" aria-live="polite"></div>
 
       </section>
     </div>
 
     <details class="panel customization-panel" id="customize">
-      <summary><span class="summary-title">Advanced Settings · Equipment / Skills / Target</span><span class="summary-note">Weapon, skills and target</span></summary>
+      <summary><span class="summary-title" data-i18n="advanced">Advanced Settings · Equipment / Skills / Target</span><span class="summary-note" data-i18n="advancedNote">Weapon, skills and target</span></summary>
       <div class="custom-grid">
         <div class="config-stack">
           <section class="config-section">
-            <h3>Skill Database</h3>
-            <label for="skillProfile">Server skill data</label>
+            <p class="config-note" data-i18n="namesHelp"></p>
+            <h3 data-i18n="database">Skill Database</h3>
+            <label for="skillProfile" data-i18n="profile">Server skill data</label>
             <select id="skillProfile">
-              <option value="original">SILKROAD_R_SHARD (Original data)</option>
-              <option value="vsro" selected>SRO_VT_SHARD (vSRO)</option>
+              <option value="original" data-i18n="original">SILKROAD_R_SHARD (Original data)</option>
+              <option value="vsro" selected data-i18n="vsro">SRO_VT_SHARD (vSRO)</option>
             </select>
-            <p class="config-note">Select the database matching your server.</p>
+            <p class="config-note" data-i18n="profileNote">Select the database matching your server.</p>
           </section>
           <section class="config-section">
-            <h3>Normal Attack</h3>
-            <label for="weapon">Weapon mastery</label>
+            <h3 data-i18n="normal">Normal Attack</h3>
+            <label for="weapon" data-i18n="weapon">Weapon mastery</label>
             <select id="weapon">
-              <option value="sword">Bicheon Normal Attack</option>
-              <option value="spear">Heuksal Normal Attack</option>
-              <option value="bow" selected>Pacheon Normal Attack</option>
+              <option value="sword" data-i18n="bicheon">Bicheon Normal Attack</option>
+              <option value="spear" data-i18n="heuksal">Heuksal Normal Attack</option>
+              <option value="bow" selected data-i18n="pacheon">Pacheon Normal Attack</option>
             </select>
 
             <details class="inner-details" id="weapon-details">
-              <summary>Optional weapon / build comparison</summary>
-              <label for="apMode">Attack Power source</label>
+              <summary data-i18n="optional">Optional weapon / build comparison</summary>
+              <label for="apMode" data-i18n="apSource">Attack Power source</label>
               <select id="apMode">
-                <option value="displayed" selected>Character screen (C)</option>
-                <option value="tooltip">Weapon tooltip + reinforcement</option>
+                <option value="displayed" selected data-i18n="displayed">Character screen (C)</option>
+                <option value="tooltip" data-i18n="tooltipMode">Weapon tooltip + reinforcement</option>
               </select>
               <div id="reinforcement-fields" class="fields"></div>
-              <p class="config-note">For damage testing use the Attack Power shown on your C screen. Weapon tooltip mode is optional for comparing STR/INT builds.</p>
+              <p class="config-note" data-i18n="apHelp">For damage testing use the Attack Power shown on your C screen. Weapon tooltip mode is optional for comparing STR/INT builds.</p>
             </details>
           </section>
           <section class="config-section">
-            <h3>Imbue</h3>
-            <div class="field"><label for="imbue-group">Skill series (database)</label><select id="imbue-group"><option value="">Manual values</option></select></div>
-            <div class="field"><label for="imbue-skillLevel">Learned skill level</label><select id="imbue-skillLevel"><option value="">Auto: highest available</option></select></div>
+            <h3 data-i18n="imbue">Imbue</h3>
+            <div class="field"><label for="imbue-group" data-i18n="series">Skill series</label><select id="imbue-group"><option value="" data-i18n="manual">Manual values</option></select></div>
+            <div class="field"><label for="imbue-skillLevel" data-i18n="learned">Learned skill level</label><select id="imbue-skillLevel"><option value="" data-i18n="auto">Auto: highest available</option></select></div>
             <p class="skill-auto-note" id="imbue-auto-note" hidden></p>
             
             <div class="fields skill-manual-fields" id="imbue-fields"></div>
 
           </section>
           <section class="config-section">
-            <h3>Additional Options</h3>
-            <p class="config-note">Mastery follows Character Level by default. Lower any Mastery you have not fully trained; skill levels adjust automatically.</p>
+            <h3 data-i18n="additional">Additional Options</h3>
+            <p class="config-note" data-i18n="masteryHelp">Mastery follows Character Level by default. Lower any Mastery you have not fully trained; skill levels adjust automatically.</p>
             <div class="fields">
-              <div class="field"><label for="devilRate">Devil HP / MP bonus (%)</label><input id="devilRate" type="number" min="0" step="any" value="0"></div>
-              <div class="field"><label for="extraHP">Flat HP bonus</label><input id="extraHP" type="number" min="0" step="1" value="0"></div>
-              <div class="field"><label for="extraMP">Flat MP bonus</label><input id="extraMP" type="number" min="0" step="1" value="0"></div>
-              <div class="field"><label for="unspentPoints">Unspent stat points</label><input id="unspentPoints" type="number" min="0" step="1" value="0"></div>
-              <div class="field"><label for="maxLevelReached">Maximum level reached</label><input id="maxLevelReached" type="number" min="1" max="255" step="1" value="100"></div>
+              <div class="field"><label for="devilRate" data-i18n="devilRate">Devil HP / MP bonus (%)</label><input id="devilRate" type="number" min="0" step="any" value="0"></div>
+              <div class="field"><label for="extraHP" data-i18n="extraHP">Flat HP bonus</label><input id="extraHP" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="extraMP" data-i18n="extraMP">Flat MP bonus</label><input id="extraMP" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="unspentPoints" data-i18n="unspentPoints">Unspent stat points</label><input id="unspentPoints" type="number" min="0" step="1" value="0"></div>
+              <div class="field"><label for="maxLevelReached" data-i18n="maxLevelReached">Maximum level reached</label><input id="maxLevelReached" type="number" min="1" max="255" step="1" value="100"></div>
               <div id="mastery-fields" class="fields wide-field"></div>
             </div>
           </section>
         </div>
         <div class="config-stack">
           <section class="config-section">
-            <h3>Physical Skill</h3>
-            <div class="field"><label for="physicalSkill-group">Skill series (database)</label><select id="physicalSkill-group"><option value="">Manual values</option></select></div>
-            <div class="field"><label for="physicalSkill-skillLevel">Learned skill level</label><select id="physicalSkill-skillLevel"><option value="">Auto: highest available</option></select></div>
+            <h3 data-i18n="physicalSkill">Physical Skill</h3>
+            <div class="field"><label for="physicalSkill-group" data-i18n="series">Skill series</label><select id="physicalSkill-group"><option value="" data-i18n="manual">Manual values</option></select></div>
+            <div class="field"><label for="physicalSkill-skillLevel" data-i18n="learned">Learned skill level</label><select id="physicalSkill-skillLevel"><option value="" data-i18n="auto">Auto: highest available</option></select></div>
             <p class="skill-auto-note" id="physicalSkill-auto-note" hidden></p>
             
             <div class="fields skill-manual-fields" id="physicalSkill-fields"></div>
           </section>
           <section class="config-section">
-            <h3>Nuke / Magical Skill</h3>
-            <div class="field"><label for="nuke-group">Skill series (database)</label><select id="nuke-group"><option value="">Manual values</option></select></div>
-            <div class="field"><label for="nuke-skillLevel">Learned skill level</label><select id="nuke-skillLevel"><option value="">Auto: highest available</option></select></div>
+            <h3 data-i18n="nukeTitle">Nuke / Magical Skill</h3>
+            <div class="field"><label for="nuke-group" data-i18n="series">Skill series</label><select id="nuke-group"><option value="" data-i18n="manual">Manual values</option></select></div>
+            <div class="field"><label for="nuke-skillLevel" data-i18n="learned">Learned skill level</label><select id="nuke-skillLevel"><option value="" data-i18n="auto">Auto: highest available</option></select></div>
             <p class="skill-auto-note" id="nuke-auto-note" hidden></p>
             
             <div class="fields skill-manual-fields" id="nuke-fields"></div>
           </section>
           <section class="config-section">
-            <h3>Target · Manyang</h3>
-            <p class="config-note">Manyang Lv1 is preselected. You can change these values for another target.</p>
+            <h3 data-i18n="target">Target · Manyang</h3>
+            <p class="config-note" data-i18n="targetHelp">Manyang Lv1 is preselected. You can change these values for another target.</p>
             <div class="fields" id="target-fields"></div>
           </section>
         </div>
@@ -159,11 +165,11 @@
 
   <p id="error" role="alert" hidden></p>
   <details class="panel compare-details">
-    <summary><span class="summary-title">Compare Full STR / Your Build / Full INT</span><span class="summary-note">Optional side-by-side view</span></summary>
+    <summary><span class="summary-title" data-i18n="compare">Compare Full STR / Your Build / Full INT</span><span class="summary-note" data-i18n="compareNote">Optional side-by-side view</span></summary>
     <div class="build-compare" id="comparison"></div>
   </details>
-  <p class="disclaimer">Weapon tooltip AP is estimated. <a href="docs/VALIDATION.md">Validation and model limits</a></p>
-  <footer><a href="docs/DAMAGE_FORMULA.md">GameServer Formula</a> · <a href="docs/VALIDATION.md">Validation</a> · <a href="https://github.com/Mgunbatti/xSilkroad-Hybrid-Calculator">GitHub Source</a></footer>
+  <p class="disclaimer"><span data-i18n="disclaimer">Weapon tooltip AP is estimated.</span> <a href="docs/VALIDATION.md" data-i18n="limits">Validation and model limits</a></p>
+  <footer><a href="docs/DAMAGE_FORMULA.md" data-i18n="formula">GameServer Formula</a> · <a href="docs/VALIDATION.md" data-i18n="validation">Validation</a> · <a href="https://github.com/Mgunbatti/xSilkroad-Hybrid-Calculator" data-i18n="source">GitHub Source</a></footer>
 </main>
 </body>
 </html>

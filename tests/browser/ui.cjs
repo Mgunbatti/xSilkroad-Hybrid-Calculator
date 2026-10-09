@@ -6,6 +6,7 @@ const path=require('node:path');
 const {chromium}=require('playwright');
 const artifactDir=process.env.UI_ARTIFACT_DIR||require('node:os').tmpdir();
 const root=path.resolve(__dirname,'../..');
+const locales=require('../../i18n.js').locales;
 // Serve JSON catalogues over HTTP: browsers don't allow file:// fetch().
 async function startFixtureServer(){
  const server=createServer((req,res)=>{
@@ -87,6 +88,8 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   for(const [id,value] of Object.entries({bonusSTR:77,bonusINT:77,physicalMin:1315,physicalMax:1568,magicalMin:1041,magicalMax:1207,'mastery-physical':52,'mastery-imbue':52,'mastery-nuke':40,'imbue-min':187,'imbue-max':312,'physicalSkill-min':574,'physicalSkill-max':777,'physicalSkill-rate':350,'nuke-min':123,'nuke-max':205,'nuke-rate':250}))await page.locator('#'+id).fill(String(value));
   // Skills are included automatically when configured; no Include checkboxes.
   for(const key of ['imbue','physicalSkill','nuke'])assert.equal(await page.locator('#'+key+'-enabled').count(),0);
+  // Manual selection clears all three fields, including the imbue rate.
+  await page.locator('#imbue-rate').fill('100');
   await page.waitForFunction(()=>document.querySelector('#quick-results').textContent.includes('4,952'));
   assert.equal(await page.locator('#error').isVisible(),false);
   const results=await page.locator('#quick-results').innerText();
@@ -113,6 +116,110 @@ test('browser: five results, preserved manual inputs, mastery errors, reset and 
   assert.equal(await page.locator('#imbue-max').inputValue(),'1520');
   assert.equal(await page.locator('#mastery-nuke').inputValue(),'100');
   assert.equal(await page.locator('#error').isVisible(),false);
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();await new Promise(resolve=>fixture.server.close(resolve));}
+});
+
+test('localization: all 16 languages preserve inputs and results; RTL, mobile, names, errors and persistence',async()=>{
+ const fixture=await startFixtureServer();
+ const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(fixture.url);
+  await page.waitForFunction(()=>document.querySelector('#physicalSkill-group').value==='SKILL_CH_BOW_POWER_D');
+  await page.locator('#customize').evaluate(e=>e.open=true);
+  await page.locator('#weapon-details').evaluate(e=>e.open=true);
+  await page.locator('#physicalSkill-skillLevel').selectOption('2');
+  await page.locator('#bonusSTR').fill('31');
+  await page.waitForFunction(()=>HybridEngine.compare(read()).selected.stats.STR===447);
+  const values=()=>page.locator('#hybrid-form input, #hybrid-form select').evaluateAll(es=>es.map(e=>[e.id,e.value]));
+  const initial=await values(),result=await page.evaluate(()=>HybridEngine.compare(read()));
+  for(const locale of Object.keys(locales)){
+   await page.locator('#language').selectOption(locale);
+   await page.waitForFunction(code=>document.documentElement.lang===code,locale);
+   const pack=require('../../locales/'+locale+'.json');
+   assert.equal(await page.locator('h1').textContent(),pack.hero,locale);
+   assert.equal(await page.locator('[data-i18n-aria]').getAttribute('aria-label'),pack.presets);
+   assert.equal(await page.locator('#quick-results .damage').first().locator('span:not(.mini-icon)').textContent(),pack.normal);
+   assert.deepEqual(await values(),initial,locale+' inputs');
+   assert.deepEqual(await page.evaluate(()=>HybridEngine.compare(read())),result,locale+' math');
+   assert.equal(await page.locator('html').getAttribute('dir'),['ar','fa'].includes(locale)?'rtl':'ltr');
+   assert.equal(await page.locator('#strPoints').evaluate(e=>getComputedStyle(e).direction),'ltr');
+   const label=await page.locator('#physicalSkill-group option:checked').textContent();
+   if(locale==='vi')assert.match(label,/Tất Sát/);
+   else if(locale==='ko')assert.match(label,/강궁시/);
+   else {assert.match(label,/Strong Bow - Will/);if(locale!=='en')assert.ok(label.includes(pack.englishName));}
+   for(const width of [1440,390,320]){
+    await page.setViewportSize({width,height:900});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),locale+' overflow at '+width);
+   }
+   if(['tr','ar','fa','vi'].includes(locale)){
+    await page.screenshot({path:path.join(artifactDir,'i18n-'+locale+'-mobile.png'),fullPage:true});
+   }
+  }
+  await page.locator('#language').selectOption('tr');
+  await page.waitForFunction(()=>document.documentElement.lang==='tr');
+  await page.locator('#mastery-imbue').fill('101');
+  await page.waitForFunction(()=>!document.querySelector('#error').hidden);
+  assert.match(await page.locator('#error').textContent(),/ustalık seviyesi.*arasında/);
+  await page.locator('#language').selectOption('ar');
+  await page.waitForFunction(()=>document.documentElement.lang==='ar');
+  assert.match(await page.locator('#error').textContent(),/يجب/);
+  await page.locator('#mastery-imbue').fill('100');
+  await page.locator('#reset').click();
+  await page.waitForFunction(()=>document.querySelector('#physicalSkill-group').value==='SKILL_CH_BOW_POWER_D');
+  assert.equal(await page.locator('html').getAttribute('lang'),'ar');
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:path.join(artifactDir,'i18n-ar-desktop.png'),fullPage:true});
+  await page.reload();await page.waitForFunction(()=>document.documentElement.lang==='ar');
+  assert.equal(await page.locator('#language').inputValue(),'ar');
+  await page.locator('#customize').evaluate(e=>e.open=true);
+  await page.locator('#skillProfile').selectOption('original');
+  await page.waitForFunction(()=>skillDatabase===skillProfiles.original&&Boolean(skillDatabase));
+  const original=await page.evaluate(()=>HybridEngine.compare(read()));
+  await page.locator('#language').selectOption('vi');
+  await page.waitForFunction(()=>document.documentElement.lang==='vi');
+  assert.deepEqual(await page.evaluate(()=>HybridEngine.compare(read())),original);
+  assert.match(await page.locator('#physicalSkill-group option:checked').textContent(),/Tất Sát/);
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();await new Promise(resolve=>fixture.server.close(resolve));}
+});
+
+test('localization: missing keys/network failures/disabled storage and rapid changes use safe English fallback',async()=>{
+ const fixture=await startFixtureServer();
+ const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
+ try{
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{
+   Storage.prototype.getItem=()=>{throw new Error('blocked');};
+   Storage.prototype.setItem=()=>{throw new Error('blocked');};
+  });
+  await page.route('**/locales/de.json',async route=>{
+   await new Promise(resolve=>setTimeout(resolve,150));
+   await route.fulfill({json:{hero:'Test Deutsch',intro:'<img src=x onerror=alert(1)>'}});
+  });
+  await page.route('**/locales/ar.json',route=>route.fulfill({status:503,body:'Unavailable'}));
+  await page.goto(fixture.url);
+  assert.equal(await page.locator('html').getAttribute('lang'),'en');
+  await page.evaluate(()=>Promise.all([SilkroadI18n.setLocale('de'),SilkroadI18n.setLocale('tr')]));
+  assert.equal(await page.locator('html').getAttribute('lang'),'tr');
+  await page.evaluate(()=>SilkroadI18n.setLocale('de'));
+  assert.equal(await page.locator('h1').textContent(),'Test Deutsch');
+  assert.equal(await page.locator('#reset').textContent(),'Reset');
+  assert.equal(await page.locator('.hero img').count(),0);
+  await page.evaluate(()=>SilkroadI18n.setLocale('ar'));
+  assert.equal(await page.locator('html').getAttribute('lang'),'en');
+  assert.equal(await page.locator('#language-status').isVisible(),true);
+  await page.evaluate(()=>SilkroadI18n.setLocale('not-a-locale'));
+  assert.equal(await page.locator('html').getAttribute('dir'),'ltr');
+  await page.route('**/data/*.json',route=>route.fulfill({status:503,body:'Unavailable'}));
+  await page.reload();
+  await page.waitForFunction(()=>!document.querySelector('#error').hidden);
+  await page.evaluate(()=>SilkroadI18n.setLocale('tr'));
+  assert.equal(await page.locator('#error').textContent(),require('../../locales/tr.json').catalogError);
+  await page.locator('#customize').evaluate(e=>e.open=true);
+  assert.equal(await page.locator('#physicalSkill-min').isVisible(),true);
   assert.deepEqual(errors,[]);
  }finally{await browser.close();await new Promise(resolve=>fixture.server.close(resolve));}
 });
